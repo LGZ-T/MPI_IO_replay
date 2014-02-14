@@ -1,6 +1,5 @@
 %{
-typedef char* string;
-#define YYSTYPE	 string
+#include <stdio.h>
 %}
 %token ID
 %%
@@ -8,7 +7,7 @@ file : record file
 | record
 ;
 record : ID {
-printf("Identifier:%s\t", $1); }
+printf("Identifier:%s\n", $1); }
 ;
 %%
 int main()
