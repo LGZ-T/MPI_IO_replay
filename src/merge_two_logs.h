@@ -14,8 +14,8 @@ private:
 	string _file1;
 	string _file2;
 
-	T _data1;
-	T _data2;
+	T *_data1;
+	T *_data2;
 
 	Preprocess<T, K> * _pp1;
 	Preprocess<T, K> * _pp2;
@@ -34,19 +34,24 @@ public:
 	MergeTwoLogs(string file1, string file2, int window = 5, double size_deviation = 0.05)
 		: _file1(file1), _file2(file2), _window(window), _size_deviation(size_deviation)
 	{
-		_data1.clear();
-		_data2.clear();
+		_data1 = new T;
+		_data2 = new T;
 		_pp1 = new Preprocess<T, K>(file1);
 		_pp2 = new Preprocess<T, K>(file2);
 	}
 
 	// read T-type data directly, don't need to preprocess
-	MergeTwoLogs(T data1, T data2, int window, double size_deviation)
+	MergeTwoLogs(T *data1, T *data2, int window = 5, double size_deviation = 0.05)
 		: _data1(data1), _data2(data2), _window(window), _size_deviation(size_deviation)
 	{}
 
 	// merge two _data, _data1 is used to store the result
 	int merge(void);
+
+	T * get_result(void)
+	{
+		return _data1;
+	}
 
 };
 
@@ -56,12 +61,12 @@ int MergeTwoLogs<T, K>::merge(void)
 	if (excute_preprocess() == 2) 
 		return 2;
 	
-	cout << _data1.empty() << endl;
-	cout << _data2.empty() << endl;
+	cout << _data1->empty() << endl;
+	cout << _data2->empty() << endl;
 
 	typename T::iterator it1, it2;
-	for (it1=_data1.begin(), it2=_data2.begin();
-			it1!=_data1.end() && it2!=_data2.end();
+	for (it1=_data1->begin(), it2=_data2->begin();
+			it1!=_data1->end() && it2!=_data2->end();
 			it1++, it2++) {
 		int match = compare(it1, it2);
 
@@ -74,12 +79,12 @@ int MergeTwoLogs<T, K>::merge(void)
 	}
 	
 	cout << "Merge complete." << endl;
-	_pp1->data_print();
+	data_print(_data1);
 
 	ofstream merged_log;
 	merged_log.open("../output_data/merged_log");
 	cout << "Writing to file..." << endl;
-	_pp1->data_print(merged_log);
+	data_print(_data1, merged_log);
 	cout << "Complete." << endl;
 	merged_log.close();
 
@@ -90,18 +95,18 @@ template<typename T, typename K>
 int MergeTwoLogs<T, K>::excute_preprocess(void)
 {
 	// already processed
-	if ((!_data1.empty()) && (!_data2.empty()))
+	if ((!_data1->empty()) && (!_data2->empty()))
 		return 1;
 	
 	// TODO: only one of data1 or data2 is not empty, should raise exception
-	if (!(_data1.empty() && _data2.empty()))
+	if (!(_data1->empty() && _data2->empty()))
 		return 2;
 
 	_pp1->run();
-	_data1 = _pp1->get_data();
+	_data1 = &_pp1->get_data();
 
 	_pp2->run();
-	_data2 = _pp2->get_data();
+	_data2 = &_pp2->get_data();
 
 	return 0;
 }
@@ -132,7 +137,7 @@ int MergeTwoLogs<T, K>::compare(typename T::iterator it1, typename T::iterator i
 						continue;
 				}
 				// TODO: ignore filename for now 
-				else if (kit1->first == "filename" || kit1->first == "fh" || kit1->first == "info" || kit2->first == "status")
+				else if (kit1->first == "filename" || kit1->first == "fh" || kit1->first == "info" || kit1->first == "status" || kit1->first == "tm1" || kit1->first == "tm2")
 					continue;
 				else {
 					cout << "1:" << kit1->first << "->" << kit1->second << endl;
