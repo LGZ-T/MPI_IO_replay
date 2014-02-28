@@ -1,0 +1,76 @@
+Begin...  128
+Start time skew across all tasks: 0.01 sec
+Max Write: 1269.43 MiB/sec (1331.10 MB/sec)
+Max Read:  9499.54 MiB/sec (9960.99 MB/sec)
+Start time skew across all tasks: 0.03 sec
+Max Write: 1328.03 MiB/sec (1392.54 MB/sec)
+Max Read:  5448.45 MiB/sec (5713.11 MB/sec)
+Start time skew across all tasks: 0.00 sec
+Max Write: 1281.51 MiB/sec (1343.76 MB/sec)
+Max Read:  5531.78 MiB/sec (5800.49 MB/sec)
+Start time skew across all tasks: 0.02 sec
+Max Write: 1396.72 MiB/sec (1464.57 MB/sec)
+Max Read:  5432.93 MiB/sec (5696.84 MB/sec)
+Start time skew across all tasks: 0.00 sec
+Max Write: 1220.42 MiB/sec (1279.70 MB/sec)
+Max Read:  5934.36 MiB/sec (6222.63 MB/sec)
+Begin...  256
+Start time skew across all tasks: 0.01 sec
+Max Write: 1289.06 MiB/sec (1351.67 MB/sec)
+Max Read:  10584.18 MiB/sec (11098.31 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 1377.88 MiB/sec (1444.82 MB/sec)
+Max Read:  12543.26 MiB/sec (13152.57 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 1385.17 MiB/sec (1452.46 MB/sec)
+Max Read:  7770.04 MiB/sec (8147.48 MB/sec)
+Begin...  512
+Start time skew across all tasks: 0.01 sec
+Max Write: 987.36 MiB/sec (1035.32 MB/sec)
+Max Read:  7062.22 MiB/sec (7405.28 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 949.14 MiB/sec (995.24 MB/sec)
+Max Read:  8306.49 MiB/sec (8709.98 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 968.72 MiB/sec (1015.78 MB/sec)
+Max Read:  6055.46 MiB/sec (6349.61 MB/sec)
+Begin...  1024
+Start time skew across all tasks: 0.02 sec
+Max Write: 844.89 MiB/sec (885.93 MB/sec)
+Max Read:  6727.50 MiB/sec (7054.29 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 832.82 MiB/sec (873.28 MB/sec)
+Max Read:  5567.54 MiB/sec (5837.99 MB/sec)
+Start time skew across all tasks: 0.00 sec
+Max Write: 843.33 MiB/sec (884.29 MB/sec)
+Max Read:  7087.86 MiB/sec (7432.16 MB/sec)
+Begin...  2048
+Start time skew across all tasks: 0.01 sec
+Max Write: 783.39 MiB/sec (821.44 MB/sec)
+Max Read:  692.36 MiB/sec (725.99 MB/sec)
+Start time skew across all tasks: 0.02 sec
+Max Write: 784.19 MiB/sec (822.28 MB/sec)
+Max Read:  689.95 MiB/sec (723.46 MB/sec)
+Start time skew across all tasks: 0.02 sec
+Max Write: 790.45 MiB/sec (828.84 MB/sec)
+Max Read:  705.94 MiB/sec (740.23 MB/sec)
+Begin...  4096
+Start time skew across all tasks: 0.02 sec
+Max Write: 763.06 MiB/sec (800.12 MB/sec)
+Max Read:  294.03 MiB/sec (308.31 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 753.37 MiB/sec (789.96 MB/sec)
+Max Read:  296.53 MiB/sec (310.93 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 767.74 MiB/sec (805.04 MB/sec)
+Max Read:  298.26 MiB/sec (312.75 MB/sec)
+Begin...  8192
+Start time skew across all tasks: 0.01 sec
+Max Write: 727.31 MiB/sec (762.64 MB/sec)
+Max Read:  276.36 MiB/sec (289.78 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 752.10 MiB/sec (788.63 MB/sec)
+Max Read:  285.76 MiB/sec (299.64 MB/sec)
+Start time skew across all tasks: 0.01 sec
+Max Write: 733.80 MiB/sec (769.44 MB/sec)
+Max Read:  279.83 MiB/sec (293.42 MB/sec)
