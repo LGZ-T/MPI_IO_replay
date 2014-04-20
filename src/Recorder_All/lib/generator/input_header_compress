@@ -1,0 +1,71 @@
+/*
+ *  (C) 2009 by Argonne National Laboratory.
+ *      See COPYRIGHT in top-level directory.
+ */
+
+#define _XOPEN_SOURCE 500
+#define _GNU_SOURCE /* for tdestroy() */
+
+#include "recorder-runtime-config.h"
+
+#include <stdio.h>
+#ifdef HAVE_MNTENT_H
+#include <mntent.h>
+#endif
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <limits.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <zlib.h>
+#include <assert.h>
+#include <search.h>
+
+#include "mpi.h"
+#include "recorder-compress.h"
+#include "recorder-dynamic.h"
+
+extern char* __progname;
+FILE *__recorderfh;
+
+void recorder_mpi_initialize(int *argc, char ***argv)
+{
+    int nprocs;
+    int rank;
+
+    RECORDER_MPI_CALL(PMPI_Comm_size)(MPI_COMM_WORLD, &nprocs);
+    RECORDER_MPI_CALL(PMPI_Comm_rank)(MPI_COMM_WORLD, &rank);
+
+    char *logfile_name;
+    char *logdir_name;
+    logfile_name=(char*)malloc(PATH_MAX);
+    logdir_name=(char*)malloc(PATH_MAX);
+    char cuser[L_cuserid] = {0};
+    cuserid(cuser);
+
+    sprintf(logdir_name,"%s_%s",cuser, __progname);
+    int status;
+    status = mkdir(logdir_name, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    sprintf(logfile_name,"%s/log.%d",logdir_name,rank);
+    __recorderfh=fopen(logfile_name,"w");
+
+    printf(" logfile_name %s ,recorderfh %d\n",logfile_name,__recorderfh);
+
+	// initialize sc
+	create_sc_by_filename(&sc, logfile_name);
+
+    free(logfile_name);
+    free(logdir_name);
+
+    return;
+}
+
+void recorder_shutdown(int timing_flag)
+{
+    fclose(__recorderfh);
+
+    return;
+}
