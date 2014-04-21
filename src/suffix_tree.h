@@ -13,6 +13,7 @@ using std::make_pair;
 using std::cout;
 using std::endl;
 using std::out_of_range;
+using std::ostream;
 //typedef tr1::unordered_map map;
 
 // TODO: upgrade it to process trace. Rule: char-->elem  string-->elem_list
@@ -28,7 +29,7 @@ public:
 		//root(test_str);
 	}*/
 	// active point is initialized as (root, None, 0), remainder initialized as 1
-	SuffixTree(string str):test_str(str), pos(0), root(test_str), active_point(&root, 0, 0), remainder(0) {}
+	SuffixTree(string str):test_str(str), pos(0), root(test_str), active_point(&root, 0, 0), remainder(0), ls() {}
 	int construct(void);
 
 	int print_tree(void);
@@ -73,6 +74,15 @@ private:
 			return test_node_str[i];
 		}
 
+		friend ostream& operator<<(ostream& os, Edge& edge)
+		{
+			int end = edge.test_node_str.size() - 1 < edge.end ? edge.test_node_str.size() - 1 : edge.end;
+			for (int i=edge.begin; i<=end; i++)
+				os << edge.test_node_str[i];
+			if (end < edge.end)
+				os << '#';
+		}
+
 		bool is_none(void) { return begin == 0 && end == 0; }
 	};
 	typedef struct Edge Edge;
@@ -83,9 +93,12 @@ private:
 		map<Edge*, bool> edges;
 		// find the edge quicky by storing the leading char of this edge
 		map<char, Edge*> findedges;
+		Node* suffix_link;
+
+		friend class LinkState;
 
 		Node(string& str) : 
-			test_node_str(str) { edges.clear(); std::cout << "Node initialized" << std::endl; }
+			test_node_str(str), suffix_link(NULL) { edges.clear(); std::cout << "Node initialized" << std::endl; }
 
 		int add_edge(Edge* edge) { 
 			edge->endpoint = new Node(test_node_str);
@@ -99,7 +112,9 @@ private:
 		// find edge by the first char
 		Edge* find_edge(char c)
 		{
+			cout << "finding edge";
 			map<char, Edge*>::iterator iter = findedges.find(c);
+			cout << "founded?" << endl;
 			if (iter != findedges.end()) 
 				return iter->second;
 			else
@@ -130,7 +145,7 @@ private:
 	ActivePoint active_point;
 
 	Node* get_active_node(void) { return active_point.active_node; }
-	void set_active_node(Node* node) { active_point.active_node = node; }
+	void set_active_node(Node* node) { active_point.active_node = node; cout << "Active node set as " << node << endl; }
 	char get_active_edge(void) { return active_point.active_edge; }
 	void set_active_edge(char edge) { active_point.active_edge = edge; }
 	int get_active_length(void) { return active_point.active_length; }
@@ -146,7 +161,10 @@ private:
 	// insert a char from pos to suffix tree
 	int insert();
 	int insert_rule1();
+	int insert_rule3();
 	int print_node(Node* node, int level);
+
+	Node* seperate_edge(Node * node, Edge* edge, int rule);
 
 	// check if we can change active node
 	void check_an(void)
@@ -166,4 +184,36 @@ private:
 			set_active_length(0);
 		}
 	}
+
+	// this class indicate when shall we insert a suffix link
+	// ls should be a singleton
+	class LinkState
+	{
+		bool first;
+		
+		Node* prev, *curr;
+
+	public:
+		LinkState() : first(true), prev(NULL), curr(NULL) {}
+
+		void ins_link(Node* node)
+		{
+			prev = curr;
+			curr = node;
+			
+			if (!first) {
+				prev->suffix_link = curr;
+				cout << "Suffix link added from prev " << prev << " to curr " << curr << endl;
+			}
+
+			first = false;
+		}
+
+		void clear(void)
+		{
+			first = true;
+			prev = curr = NULL;
+		}
+	};
+	LinkState ls;
 };

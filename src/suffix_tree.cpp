@@ -6,6 +6,7 @@
 int SuffixTree::construct(void)
 {
 	while (pos < test_str.size()) {
+		ls.clear();
 		remainder++;
 		cout << "Char:  "  << test_str[pos] << endl;
 
@@ -22,10 +23,13 @@ int SuffixTree::insert(void)
 	int result = 0;
 
 	Node* node = active_point.active_node;
-	if (node == (&root))
-	{
+	if (node == (&root)) {
 		cout << "ActiveNode is root." << endl;
 		result = insert_rule1();	
+	}
+	else {
+		cout << "ActiveNode isn't root." << endl;
+		result = insert_rule3();
 	}
 
 	return result;
@@ -48,7 +52,7 @@ int SuffixTree::insert_rule1(void)
 	Edge* possible = NULL;
 	bool will_insert = false;
 	if (get_active_length() != 0 && a_edge != NULL) {
-		//TODO: may throw out_of_range here, e.g. abcabc*
+		// shouldn't throw out_of_range here, e.g. abcabc*
 		char match_char = (*a_edge)[get_active_length()];
 		if (match_char == get_ele(pos))
 			possible = a_edge;
@@ -70,6 +74,7 @@ int SuffixTree::insert_rule1(void)
 	}
 	else {
 		cout << "Error!!!!!!!!!!!!!!!!!!!1" << endl;
+		//throw;
 	}
 
 	
@@ -86,31 +91,7 @@ int SuffixTree::insert_rule1(void)
 	else {
 		// seperate the old edge, set new active edge
 		if (a_edge != NULL) {
-			cout << "seperate the old edge here" << endl;
-			
-			int new_begin = a_edge->begin + get_active_length();
-			int new_end = a_edge->end;
-
-			int old_begin = a_edge->begin;
-			int old_end = new_begin - 1;
-
-			Edge* new_edge1 = new Edge(new_begin, new_end, test_str);
-			a_edge->endpoint->add_edge(new_edge1);
-
-			// 
-			if (remainder > 2)
-				active_char = (*a_edge)[1];
-			else 
-				active_char = get_ele(pos);
-			a_edge->change_edge(old_begin, old_end);
-			 
-			set_active_edge(active_char);
-			dec_active_len();
-
-			cout << "root " << (&root) << endl;
-			cout << node << endl;
-			node = a_edge->endpoint;
-			cout << node << endl;
+			node = seperate_edge(node, a_edge, 1);
 		}
 
 		cout << "append a new edge at endpoint" << endl;
@@ -122,6 +103,110 @@ int SuffixTree::insert_rule1(void)
 	remainder--;
 	
 	return will_insert;
+}
+
+SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
+{
+	cout << "seperate the old edge here: " << (*a_edge) << endl;
+			
+	int new_begin = a_edge->begin + get_active_length();
+	int new_end = a_edge->end;
+
+	int old_begin = a_edge->begin;
+	int old_end = new_begin - 1;
+
+	Edge* new_edge1 = new Edge(new_begin, new_end, test_str);
+	a_edge->endpoint->add_edge(new_edge1);
+
+	char active_char;
+	 
+	if (remainder > 2)
+		active_char = (*a_edge)[1];
+	else 
+		active_char = get_ele(pos);
+	a_edge->change_edge(old_begin, old_end);
+	cout << "change edge" << endl;
+
+	cout << "What's wrong?" << endl;
+	cout << "Old edge seperated as -- ";
+	cout << (*a_edge);
+	cout << " and -- "; 
+	cout << (*new_edge1) << endl;
+	cout << "What's wrong?" << endl;
+			
+	if (rule == 1) {
+		set_active_edge(active_char);
+		dec_active_len();
+	}
+	else if (rule == 3) {
+		Node* n = &root;	// new active node
+		cout << node;
+		if (node->suffix_link) {
+			n = node->suffix_link;
+			cout << " Moved to suffix link!--------------" << endl;
+		}
+		else
+			cout << " Moved to root!------------------" << endl;
+		set_active_node(n);
+	}
+
+	cout << "root " << (&root) << endl;
+	cout << node << endl;
+	node = a_edge->endpoint;
+	ls.ins_link(node);
+	cout << node << endl;
+
+	return node;
+}
+
+// applies when the active is not root
+int SuffixTree::insert_rule3()
+{
+	cout << "Rule3" << endl;
+	Node * node = get_active_node();
+	cout << "Active node " << node << endl;
+	Edge * edge = node->find_edge(get_active_edge());
+
+	// input match a suffix?
+	bool match = false;
+	if (get_active_length() == 0) {
+		if (node->find_edge(get_ele(pos))) {
+			match = true;
+
+			set_active_edge(get_ele(pos));
+			inc_active_len();
+			check_an();
+		}
+	}
+	else {
+		// assert edge is not NULL
+		char match_char = (*edge)[get_active_length()];
+		if (match_char == get_ele(pos)) {
+			match = true;
+
+			inc_active_len();
+			check_an();
+		}
+	}
+
+	if (match)
+		return 0;
+
+	if (edge != NULL) {
+		node = seperate_edge(node, edge, 3);
+	}
+
+	using std::numeric_limits;
+
+	cout << "append a new edge at endpoint" << endl;
+	Edge* new_edge2 = new Edge(pos, numeric_limits<int>::max(), test_str);
+	cout << node << endl;
+	node->add_edge(new_edge2);
+
+	remainder--;
+
+	return 1;	// should insert again at a different node
+	
 }
 
 int SuffixTree::print_tree()
