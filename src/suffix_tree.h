@@ -76,11 +76,19 @@ private:
 
 		friend ostream& operator<<(ostream& os, Edge& edge)
 		{
-			int end = edge.test_node_str.size() - 1 < edge.end ? edge.test_node_str.size() - 1 : edge.end;
-			for (int i=edge.begin; i<=end; i++)
-				os << edge.test_node_str[i];
-			if (end < edge.end)
+			int end = edge.test_node_str.size()-1;
+			if (end >= edge.end)
+				end = edge.end;
+
+			char c;
+			for (int i=edge.begin; i<=end; i++) {
+				c = edge.test_node_str[i];
+				os << c;
+			}
+			if (end != edge.end)
 				os << '#';
+
+			return os;
 		}
 
 		bool is_none(void) { return begin == 0 && end == 0; }
@@ -98,15 +106,30 @@ private:
 		friend class LinkState;
 
 		Node(string& str) : 
-			test_node_str(str), suffix_link(NULL) { edges.clear(); std::cout << "Node initialized" << std::endl; }
+			test_node_str(str), suffix_link(NULL) { edges.clear(); findedges.clear(); std::cout << "Node initialized" << std::endl; }
 
 		int add_edge(Edge* edge) { 
-			edge->endpoint = new Node(test_node_str);
+			if (edge->endpoint == NULL)
+				edge->endpoint = new Node(test_node_str);
 			make_pair(edge, true);
-			cout << "node appended to edge" << endl;
 			edges.insert(make_pair(edge, true)); 
 			findedges.insert(make_pair(test_node_str[edge->begin], edge));
-			cout << "edge added" << endl;
+			cout << "edge added. Now we have " << edges.size() << "edges." << endl;
+		}
+
+		int del_edge(Edge* edge) {
+			map<Edge*, bool>::iterator iter = edges.find(edge);
+
+			if (iter == edges.end())
+				throw out_of_range("edge don't exit");
+			else {
+				// note we should erase the findedges too
+				edges.erase(edge);
+				cout << "delete" << (*edge)[0] << endl;
+				findedges.erase((*edge)[0]);
+				cout << "edge deleted. Now we have " << edges.size() << "edges." << endl;
+			}
+
 		}
 
 		// find edge by the first char
@@ -128,6 +151,20 @@ private:
 			return (this) == (&other);
 		}
 
+		friend ostream& operator<<(ostream& os, Node& node)
+		{
+			map<Edge*, bool>::iterator iter;
+			map<char, Edge*>::iterator iter_f;
+
+			for (iter=node.edges.begin(); iter!=node.edges.end(); ++iter)
+				os << iter->first << '\t';
+			os << endl;
+			
+			for (iter_f=node.findedges.begin(); iter_f!=node.findedges.end(); ++iter_f)
+				os << iter_f->first << "-->" << iter_f->second << endl;
+
+			return os;
+		}
 	};
 	//typedef struct Node Node;
 

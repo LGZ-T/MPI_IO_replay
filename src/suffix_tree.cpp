@@ -109,29 +109,41 @@ SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 {
 	cout << "seperate the old edge here: " << (*a_edge) << endl;
 			
-	int new_begin = a_edge->begin + get_active_length();
-	int new_end = a_edge->end;
-
-	int old_begin = a_edge->begin;
-	int old_end = new_begin - 1;
-
-	Edge* new_edge1 = new Edge(new_begin, new_end, test_str);
-	a_edge->endpoint->add_edge(new_edge1);
-
 	char active_char;
 	 
 	if (remainder > 2)
 		active_char = (*a_edge)[1];
 	else 
 		active_char = get_ele(pos);
-	a_edge->change_edge(old_begin, old_end);
+
+	int new_begin = a_edge->begin + get_active_length();
+	int new_end = a_edge->end;
+
+	int old_begin = a_edge->begin;
+	int old_end = new_begin - 1;
+
+	cout << node->find_edge(active_char) << "|||||||||||||||||||||||||| char " << active_char << endl;
+	cout << (*node);
+
+	node->del_edge(a_edge);
+	a_edge->change_edge(new_begin, new_end);
+	Edge* old_edge1 = new Edge(old_begin, old_end, test_str);
+	node->add_edge(old_edge1);
+	cout << node->find_edge(active_char) << "||||||||||||||||||||||||||2 char " << active_char << endl;
+
+	old_edge1->endpoint->add_edge(a_edge);
+	cout << (*node);
+//	old_edge1->endpoint->suffix_link = a_edge->endpoint->suffix_link;
+//	a_edge->endpoint->suffix_link = NULL;
+/*-----------------------------------------------------------------------
+	Edge* new_edge1 = new Edge(new_begin, new_end, test_str);
+	a_edge->endpoint->add_edge(new_edge1);
+------------------------------------------------------------------*/
+
 	cout << "change edge" << endl;
 
 	cout << "What's wrong?" << endl;
-	cout << "Old edge seperated as -- ";
-	cout << (*a_edge);
-	cout << " and -- "; 
-	cout << (*new_edge1) << endl;
+	cout << "The old edge split as -- " << (*a_edge) << " and -- " << (*old_edge1) << endl;
 	cout << "What's wrong?" << endl;
 			
 	if (rule == 1) {
@@ -152,11 +164,11 @@ SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 
 	cout << "root " << (&root) << endl;
 	cout << node << endl;
-	node = a_edge->endpoint;
-	ls.ins_link(node);
+	Node* new_node = old_edge1->endpoint;
+	ls.ins_link(new_node);
 	cout << node << endl;
 
-	return node;
+	return new_node;
 }
 
 // applies when the active is not root

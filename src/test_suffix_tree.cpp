@@ -6,7 +6,7 @@ using namespace std;
 int main()
 {
 	cout << "Begining" << endl;
-	SuffixTree st("abcabxabcd");
+	SuffixTree st("BOOKKE");
 
 	cout << "Constructing..." << endl;
 	st.construct();
