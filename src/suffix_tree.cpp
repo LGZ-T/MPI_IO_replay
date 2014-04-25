@@ -1,12 +1,14 @@
 #include "suffix_tree.h"
 #include <iostream>
 
-bool SuffixTree::search(string sub)
+int SuffixTree::search(string sub)
 {
 	Node* node = &root;
 	bool in_edge = false; // Are we searching in middle of an edge?
 	Edge* edge = NULL;
 	int edge_pos = 0, edge_len = 0;
+
+	int result = -1;
 
 	for (int i=0; i<sub.size(); i++) {
 		char cur = sub[i];
@@ -16,7 +18,11 @@ bool SuffixTree::search(string sub)
 			edge = node->find_edge(cur);	// find an edge and search it
 
 			if (edge == NULL)
-				return false;
+				return -1;
+			
+			// record match pos
+			if (i == 0)
+				result = edge->begin;
 
 			edge_pos = 0;
 			edge_len = edge->length();
@@ -24,7 +30,7 @@ bool SuffixTree::search(string sub)
 
 		
 		if (cur != (*edge)[edge_pos])
-			return false;
+			return -1;
 
 		edge_pos++;
 		// reached the end of this edge, jump to next node
@@ -36,7 +42,7 @@ bool SuffixTree::search(string sub)
 		}
 	}
 
-	return true;
+	return result;
 }
 
 

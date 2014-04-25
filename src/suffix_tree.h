@@ -31,7 +31,9 @@ public:
 	// active point is initialized as (root, None, 0), remainder initialized as 1
 	SuffixTree(string str):test_str(str), pos(0), root(test_str), active_point(&root, 0, 0), remainder(0), ls() {}
 	int construct(void);
-	bool search(string sub);
+
+	// return -1 if no such sub exist, return the beginning postion of this substring if it exist
+	int search(string sub);
 
 	int print_tree(void);
 private:
