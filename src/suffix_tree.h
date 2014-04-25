@@ -31,6 +31,7 @@ public:
 	// active point is initialized as (root, None, 0), remainder initialized as 1
 	SuffixTree(string str):test_str(str), pos(0), root(test_str), active_point(&root, 0, 0), remainder(0), ls() {}
 	int construct(void);
+	bool search(string sub);
 
 	int print_tree(void);
 private:
@@ -57,6 +58,15 @@ private:
 		{
 			begin = b;
 			end = e;
+		}
+
+		int length(void) 
+		{
+
+			if (end > test_node_str.size())
+				return test_node_str.size() - begin;
+			else
+				return end - begin + 1; 
 		}
 		
 		// needed by map
@@ -200,6 +210,7 @@ private:
 	int insert_rule1();
 	int insert_rule3();
 	int print_node(Node* node, int level);
+
 
 	Node* seperate_edge(Node * node, Edge* edge, int rule);
 

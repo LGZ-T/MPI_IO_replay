@@ -14,5 +14,15 @@ int main()
 	cout << "Printing..." << endl;
 	st.print_tree();
 
+	cout << "Search OK:" << st.search("OK") << endl;
+	cout << "Search KKE:" << st.search("KKE") << endl;
+	cout << "Search BOO:" << st.search("BOO") << endl;
+
+	cout << endl;
+
+	cout << "Search BB:" << st.search("BB") << endl;
+	cout << "Search KKK:" << st.search("KKK") << endl;
+	cout << "Search b:" << st.search("b") << endl;
+
 	return 0;
 }

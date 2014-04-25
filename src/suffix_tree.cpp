@@ -1,7 +1,44 @@
 #include "suffix_tree.h"
 #include <iostream>
 
-// why can't I use it in function body?
+bool SuffixTree::search(string sub)
+{
+	Node* node = &root;
+	bool in_edge = false; // Are we searching in middle of an edge?
+	Edge* edge = NULL;
+	int edge_pos = 0, edge_len = 0;
+
+	for (int i=0; i<sub.size(); i++) {
+		char cur = sub[i];
+
+		if (in_edge == false) {
+			in_edge = true;
+			edge = node->find_edge(cur);	// find an edge and search it
+
+			if (edge == NULL)
+				return false;
+
+			edge_pos = 0;
+			edge_len = edge->length();
+		}
+
+		
+		if (cur != (*edge)[edge_pos])
+			return false;
+
+		edge_pos++;
+		// reached the end of this edge, jump to next node
+		if (edge_pos >= edge_len) {
+			in_edge = false;
+			node = edge->endpoint;
+			edge = NULL;
+			edge_pos = 0;
+		}
+	}
+
+	return true;
+}
+
 
 int SuffixTree::construct(void)
 {
