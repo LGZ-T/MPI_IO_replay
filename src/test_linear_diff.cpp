@@ -3,6 +3,7 @@
 
 using namespace std;
 
+// NOTE: This version is now obsolete, test_linear_diff_2 is the new, more efficient version
 int main()
 {
 	string test_left = "BOOKKE";

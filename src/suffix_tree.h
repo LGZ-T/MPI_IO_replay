@@ -32,8 +32,54 @@ public:
 	SuffixTree(string str):test_str(str), pos(0), root(test_str), active_point(&root, 0, 0), remainder(0), ls() {}
 	int construct(void);
 
-	// return -1 if no such sub exist, return the beginning postion of this substring if it exist
+	// return -1 if no such sub exist, return the beginning postion of this substring in thr original string if it exist
 	int search(string sub);
+
+	// return the length of the longest prefix of sub which can be matched in suffix tree
+	template <class Iterator>
+	Iterator inc_search(Iterator sub)
+	{
+		typedef typename Iterator::value_type T;	// extract real type
+
+		Iterator result = sub;
+		Node* node = &root;
+		Edge* edge = NULL;
+		int pos = 0;	// the iter's pos at edge
+		int edge_len = -1;
+		bool flag = true;
+
+
+		while (flag) {
+			if (edge == NULL) {
+				edge = node->find_edge(*result);	
+				if (edge == NULL) {
+					flag = false;
+				}
+				else {
+					result++;
+					pos = 1; // the second element of the edge
+					edge_len = edge->length();
+				}
+			}
+			else {
+				if (pos >= edge_len) {
+					node = edge->endpoint;
+					edge = NULL;
+					edge_len = 0;
+				}
+				else {
+					if (*result == (*edge)[pos]) {
+						result++;
+						pos++;
+					}
+					else
+						flag = false;
+				}
+			}
+		}
+		
+		return result;
+	}
 
 	int print_tree(void);
 private:
