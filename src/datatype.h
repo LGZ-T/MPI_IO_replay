@@ -5,13 +5,19 @@
 #include <map>
 #include <list>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
 //typedef tr1::unordered_map<string, string> str_hmap; // K
 typedef map<string, string> str_hmap;	// K
-typedef list<str_hmap> str_hmap_list; // T
+
+//TODO: ATTENTION!!!   str_hmap_list is actually a vector! This is to support the [] operation. Should change the name later
+typedef vector<str_hmap> str_hmap_list; // T
 
 int data_print(str_hmap_list *all_data, ostream & out = cout);
+
+// NOTE: You should use const reference as argument, so that it can accept rvalue as parameter.
+ostream& operator<<(ostream& os, const str_hmap& sh);
 
 #endif // DATATYPE_H

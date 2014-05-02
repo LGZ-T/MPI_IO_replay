@@ -17,6 +17,7 @@ int main()
 	cout << "Search OK:" << st.search("OK") << endl;
 	cout << "Search KKE:" << st.search("KKE") << endl;
 	cout << "Search BOO:" << st.search("BOO") << endl;
+	cout << "Search B:" << st.search("B") << endl;
 
 	cout << endl;
 

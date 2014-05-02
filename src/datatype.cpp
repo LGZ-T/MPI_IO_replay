@@ -20,3 +20,15 @@ int data_print(str_hmap_list *all_data, ostream & out)
 	return 0;
 }
 
+ostream& operator<<(ostream& os, const str_hmap& sh)
+{
+	typename str_hmap::const_iterator iter;
+
+	for (iter=sh.begin(); iter!=sh.end(); iter++) {
+		if (iter->first == string("func"))
+			os << iter->first << "=" << iter->second << '\t';
+	}
+	os << endl;
+
+	return os;
+}

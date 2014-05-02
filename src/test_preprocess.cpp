@@ -2,6 +2,7 @@
 #include "datatype.h"
 #include "preprocess.h"
 
+using namespace std;
 // unit test
 int main(void)
 {

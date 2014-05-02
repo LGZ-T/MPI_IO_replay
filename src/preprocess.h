@@ -7,6 +7,7 @@
 #include <tr1/unordered_map>
 #include <map>
 #include <list>
+#include <vector>
 #include "datatype.h"
 
 using namespace std;
@@ -62,7 +63,7 @@ void Preprocess<T, K>::changefile(string filename_para)
 template <typename T, typename K>
 int Preprocess<T, K>::run()
 {
-	fstream fin(filename);
+	fstream fin(filename.c_str());
 	if (!fin) {
 		std::cout << "Unable to open input file:" << filename << std::endl;
 		return 1;
