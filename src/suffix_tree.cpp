@@ -136,6 +136,8 @@ int SuffixTree::insert_rule1(void)
 		if (a_edge != NULL) {
 			node = seperate_edge(node, a_edge, 1);
 		}
+		else
+			set_active_edge(0);
 
 		cout << "append a new edge at endpoint" << endl;
 		Edge* new_edge2 = new Edge(pos, numeric_limits<int>::max(), test_str);

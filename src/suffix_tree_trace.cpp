@@ -101,7 +101,7 @@ int SuffixTree::insert_rule1(void)
 			possible = a_edge;
 		else
 			will_insert = true;	// will insert while active length is not 0 and activechar don't match
-		cout << "Active char is " << active_char << endl;
+		cout << "Active char is " << match_char << endl;
 
 		// node for insertion
 	}
@@ -136,6 +136,8 @@ int SuffixTree::insert_rule1(void)
 		if (a_edge != NULL) {
 			node = seperate_edge(node, a_edge, 1);
 		}
+		else
+			set_active_edge(nil);
 
 		cout << "append a new edge at endpoint" << endl;
 		Edge* new_edge2 = new Edge(pos, numeric_limits<int>::max(), test_str);
@@ -154,6 +156,7 @@ SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 			
 	str_hmap active_char;
 	 
+	// active char is the first char of next suffix, that is, the second char of current suffix
 	if (remainder > 2)
 		active_char = (*a_edge)[1];
 	else 

@@ -93,14 +93,17 @@ private:
 		int begin, end;
 		// Is there a better way to find test_str?
 		string& test_node_str;
+
+		Node * endpoint;
+
 		Edge(int b, int e, string& str):
 			test_node_str(str) 
 		{
 			begin = b;
 			end = e;
+			endpoint = NULL;
 			std::cout << "Edge initialized" << std::endl;
 		}
-		Node * endpoint;
 
 		int change_edge(int b, int e)
 		{

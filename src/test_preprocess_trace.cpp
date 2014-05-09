@@ -17,4 +17,8 @@ int main(void)
 	SuffixTree st(pp.get_data());
 
 	st.construct();
+
+	cout << "_____________________________________________________" << endl;
+
+	st.print_tree();
 }

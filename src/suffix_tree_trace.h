@@ -93,20 +93,21 @@ private:
 	typedef struct Node Node;
 
 	struct Edge{
+
+		Node * endpoint;
 		// the begin and end pos of this edge, note that INT_MAX stands for #(the changing end pos of this entire string)
 		int begin, end;
 		// Is there a better way to find test_str?
 		str_hmap_list& test_node_str;
 
 		// TODO: weird, const str_hmap_list& str don't work!
+		// TODO: how can I initialize endpoint???
 		Edge(int b, int e, str_hmap_list& str):
-			test_node_str(str) 
+			test_node_str(str), begin(b), end(e), endpoint(NULL)
 		{
-			begin = b;
-			end = e;
 			std::cout << "Edge initialized" << std::endl;
 		}
-		Node * endpoint;
+		
 
 		int change_edge(int b, int e)
 		{

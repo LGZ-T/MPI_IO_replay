@@ -116,6 +116,16 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 		else
 			temp_value.clear();
 
+		// ignore timestamps and nullify info, status, request
+		if (temp == "tm1" || temp == "tm2")
+			continue;
+		if (temp == "info" || temp == "status" || temp == "request")
+			temp_value = temp;
+
+		// TODO: remove it later
+		if (temp == "fh")
+			temp_value = temp;
+
 		cur_func.insert(pair<std::string, std::string>(temp, temp_value));
 	}
 	all_data.push_back(cur_func);

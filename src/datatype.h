@@ -20,4 +20,7 @@ int data_print(str_hmap_list *all_data, ostream & out = cout);
 // NOTE: You should use const reference as argument, so that it can accept rvalue as parameter.
 ostream& operator<<(ostream& os, const str_hmap& sh);
 
+// I think it's far more convenient to deal with it in the preprocess section
+//bool operator==(const str_hmap &a, const str_hmap &b);
+
 #endif // DATATYPE_H
