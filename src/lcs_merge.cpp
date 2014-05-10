@@ -1,8 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <iterator>
 
 using namespace std;
+
+// well, I know it's ugly. Don't laugh. -_-!
+int display_shortest_edit_script(int k, int d, int x, vector<vector<int>*>& storage, string& a, string& b);
 
 // TODO: test version, find edit script of strings, final ver should read MPI traces properly
 int find_shortest_edit(string& a, string& b)
@@ -15,7 +20,9 @@ int find_shortest_edit(string& a, string& b)
 	vector<int> v(2*MAX+1);
 
 	// all indexes of vector should have the form of v[???+zero]
-	const int zero = MAX + 1;
+	const int zero = MAX;
+
+	vector<vector<int>*> storage(MAX);
 
 	v[zero+1] = 0;
 
@@ -35,13 +42,68 @@ int find_shortest_edit(string& a, string& b)
 			}
 			v[k+zero] = x;
 
-			if (x>=N && y>=M)
-				return d;
-
 			cout << "diagonal k=" << k << " with depth d=" << d << " stop at (" << x << "," << y << ")" << endl;
+
+			if (x>=N && y>=M) {
+				display_shortest_edit_script(k, d, x, storage, a, b);
+				return d;
+			}
 		}
+
+		// store the current vector
+		storage[d] = new vector<int>(2*d+1);
+
+		vector<int>::iterator iter_begin, iter_end;
+		iter_begin = v.begin() + zero - d;
+		iter_end = v.begin() + zero + d + 1;
+		copy(iter_begin, iter_end, (*storage[d]).begin());
+
+		for (int i=0; i<2*d+1; i++)
+			cout << (*storage[d])[i] << " ";
+		cout << endl; 
+
+		copy((*storage[d]).begin(), (*storage[d]).end(), ostream_iterator<int>(cout, " "));
+		cout << endl;
 	}
 	return -1;
+}
+
+int display_shortest_edit_script(int k, int d, int value, vector<vector<int>*>& storage, string& a, string& b)
+{
+	cout << endl;
+	cout << "Display here." << endl;
+	cout << "k:" << k << " d:" << d << " value:" << value << endl;
+
+	if (d == 0)
+		return 0;
+
+	int x = value;
+	int y = x - k;
+
+	// strip the snake
+	do {
+		value = x;
+		cout << "k:" << k << " d:" << d << " value:" << value << endl;
+
+		int middle = d-1;
+	
+		if ((*storage[d-1])[k+1+middle] == value) {
+			display_shortest_edit_script(k+1, d-1, value, storage, a, b);
+			cout << "vectical edge from (" << value << "," << (value - (k+1)) << ") to " << "(" << value << "," << value-k << ")" << endl; 
+			break;
+		}
+		else if ((*storage[d-1])[k-1+middle] == value-1) {
+			display_shortest_edit_script(k-1, d-1, value-1, storage, a, b);
+			cout << "horizontal edge from (" << value-1 << "," << value-1-(k-1) << ") to " << "(" << value << "," << value-k << ")" << endl;
+			break;
+		}
+		else {
+			cout << "strip snake" << endl;
+		}
+		
+	} while(a[x--] == b[y--]);
+
+	return 0;
 }
 
 int main(void)
