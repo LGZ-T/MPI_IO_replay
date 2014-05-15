@@ -75,11 +75,8 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 	cout << "Display here." << endl;
 	cout << "k:" << k << " d:" << d << " value:" << value << endl;
 
-	if (d == 0) {
-        if (value > 0)
-            fout << "k " << value << endl;
+	if (d == 0)
 		return 0;
-    }
 
 	int x = value;
 	int y = x - k;
@@ -167,8 +164,8 @@ void post_process(const char* temp_filename, const char* filename)
 
 int main(void)
 {
-	string a = " xxxabcabba";
-	string b = " xxxcbabac";
+	string a = " abcabba";
+	string b = " cbabac";
 
     const char* temp_filename = "lcs_diff_output_temp";
     ofstream fout(temp_filename);

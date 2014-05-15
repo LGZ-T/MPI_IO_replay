@@ -1,0 +1,7 @@
+
+all:
+	g++ test_preprocess_trace.cpp suffix_tree_trace.cpp datatype.cpp -g -o trace_tree
+
+This works! Why??
+g++ suffix_tree_trace.o test_preprocess_trace.o -o xx
+g++ suffix_tree_trace.cpp datatype.cpp test_preprocess_trace.cpp -o suffix_trace

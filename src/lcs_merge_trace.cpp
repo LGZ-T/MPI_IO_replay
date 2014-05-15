@@ -4,14 +4,16 @@
 #include <algorithm>
 #include <iterator>
 #include <fstream>
+#include "preprocess.h"
+
 
 using namespace std;
 
 // well, I know it's ugly. Don't laugh. -_-!
-int display_shortest_edit_script(ostream& fout, int k, int d, int x, vector<vector<int>*>& storage, string& a, string& b);
+int display_shortest_edit_script(ostream& fout, int k, int d, int x, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b);
 
 // TODO: test version, find edit script of strings, final ver should read MPI traces properly
-int find_shortest_edit(ostream& fout, string& a, string& b)
+int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b)
 {
 	const int N = a.size() - 1;
 	const int M = b.size() - 1;
@@ -69,7 +71,7 @@ int find_shortest_edit(ostream& fout, string& a, string& b)
 	return -1;
 }
 
-int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<vector<int>*>& storage, string& a, string& b)
+int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b)
 {
 	cout << endl;
 	cout << "Display here." << endl;
@@ -77,7 +79,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 
 	if (d == 0) {
         if (value > 0)
-            fout << "k " << value << endl;
+            fout << "keep " << value << endl;
 		return 0;
     }
 
@@ -101,7 +103,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
             // insert unique element in string B
             fout << "insert " << b[value-k] << endl;
 
-            // output snake, k for keep!
+            // output snake
             if (keep > 0)
                 fout << "keep " << keep << endl;
 
@@ -167,14 +169,23 @@ void post_process(const char* temp_filename, const char* filename)
 
 int main(void)
 {
-	string a = " xxxabcabba";
-	string b = " xxxcbabac";
+	string a("../input_data/zhangyou_IOR/log.0");
+	string b("../input_data/zhangyou_IOR/log.1");
+	Preprocess<str_hmap_list, str_hmap> ppa(a);
+	ppa.run();	
+    ppa.data_print();
+    str_hmap_list la = ppa.get_data();
+
+	Preprocess<str_hmap_list, str_hmap> ppb(b);
+	ppb.run();	
+    ppb.data_print();
+    str_hmap_list lb = ppb.get_data();
 
     const char* temp_filename = "lcs_diff_output_temp";
     ofstream fout(temp_filename);
     const char* filename = "lcs_diff_output";
 
-	int r = find_shortest_edit(fout, a, b);
+	int r = find_shortest_edit(fout, la, lb);
     
 	cout << "The edit distance between strings is " << r << endl;
     
