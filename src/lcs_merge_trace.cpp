@@ -169,6 +169,7 @@ void post_process(const char* temp_filename, const char* filename)
 
 int main(void)
 {
+    // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
 	string a("../input_data/zhangyou_IOR/log.0");
 	string b("../input_data/zhangyou_IOR/log.1");
 	Preprocess<str_hmap_list, str_hmap> ppa(a);

@@ -29,7 +29,7 @@ MIXED_FLAG=-lstdc++
 SHARE=-shared -fPIC -DPIC
 
 lib/simple_compress.o: lib/simple_compress.cpp lib/simple_compress.h | lib
-	mpic++ -Wall -std=c++0x $(SHARE) -c $< -o $@
+	mpic++ -Wall -O2 -std=c++0x $(SHARE) -c $< -o $@
 
 lib/recorder-mpi-io-compress.o: lib/recorder-mpi-io-compress.c recorder-compress.h recorder-dynamic.h $(recorder_LOG_FORMAT) | lib
 	mpic++ -c $(CFLAGS_SHARED) $< -o $@
@@ -46,10 +46,11 @@ lib/recorder-mpi-init-finalize.po: lib/recorder-mpi-init-finalize-compress.c rec
 #lib/recorder-hdf5.po: lib/recorder-hdf5.c recorder.h $(recorder_LOG_FORMAT) | lib
 #	$(CC) $(CFLAGS_SHARED) -c $< -o $@
 
-lib/recorder-posix.po: lib/recorder-posix.c recorder.h $(recorder_LOG_FORMAT) | lib
-	mpic++ $(CFLAGS_SHARED) -c $< -o $@
+#lib/recorder-posix.po: lib/recorder-posix.c recorder.h $(recorder_LOG_FORMAT) | lib
+#	mpic++ $(CFLAGS_SHARED) -c $< -o $@
 
-lib/librecorder-compress.so: lib/recorder-mpi-io-compress.o lib/simple_compress.o lib/recorder-mpi-init-finalize.po lib/recorder-posix.po
+lib/librecorder-compress.so: lib/recorder-mpi-io-compress.o lib/simple_compress.o lib/recorder-mpi-init-finalize.po 
+#lib/recorder-posix.po
 	#lib/recorder-posix.po
 #lib/librecorder.so: lib/recorder-mpi-io.po lib/recorder-mpi-init-finalize.po lib/recorder-pnetcdf.po lib/recorder-hdf5.po lib/recorder-posix.po
 	mpic++ $(CFLAGS_SHARED) $(LDFLAGS) $(MIXED_FLAG) -ldl -o $@ $^ -lpthread -lrt -lz

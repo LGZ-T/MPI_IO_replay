@@ -14,6 +14,7 @@
 
 extern FILE* __recorderfh;
 
-double recorder_wtime(void);
+#include <time.h>
+struct timespec recorder_wtime(void);
 
 #endif /* __RECORDER_H */

@@ -14,7 +14,7 @@ def generate_head(code_file, out_file):
 	# sc should be initialized in input header
 	data += 'SimpleCompress *sc;\n\n'
 
-	data += 'double tm1, tm2;\n'
+	data += 'struct timespec tm1, tm2;\n'
 	data += 'int ret, result_len;\n'
 	data += 'char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100];\n'
 
@@ -76,8 +76,8 @@ def generate_one_function(para_list, out_file):
 				
 	call_para = '('
 	extra_data = ''
-	print_format_1 = '"tm1=%.5f tm2=%.5f func=' + para_list[0].lstrip('P') + ' '
-	print_format_2 = 'tm1, tm2'
+	print_format_1 = '"tm1=%ld.%.9ld tm2=%ld.%.9ld func=' + para_list[0].lstrip('P') + ' '
+	print_format_2 = 'tm1.tv_sec, tm1.tv_nsec, tm2.tv_sec, tm2.tv_nsec'
 	call_delim = ', '
 	delim = ' '
 	para_delim = ', '
@@ -123,10 +123,11 @@ def generate_one_function(para_list, out_file):
 	call_para += ')'
 
 	body = '{\n'
-	body += '\ttm1 = recorder_wtime();\n'
-	body += '\tret = RECORDER_MPI_CALL(' + para_list[0] + ')' + call_para + ';\n'
-	body += '\ttm2 = recorder_wtime();\n'
+	body += '\t/* tm1 is the length of time elapsed between the IO or MPI communication calls. It\'s spend in computing */\n'
+	body += '\ttm1 = ts_minus(recorder_wtime(), tm2);\n'
 	body += extra_data
+	body += '\tret = RECORDER_MPI_CALL(' + para_list[0] + ')' + call_para + ';\n'
+	body += '\ttm2 = ts_minus(recorder_wtime(), tm1);\n'
 
 #	body += '\tif (__recorderfh != NULL)\n'
 	body += '\tbytes = sprintf(rec_buffer + written_bytes, ' + print_format_1 + delim + print_format_2 + ');\n'
@@ -140,6 +141,9 @@ def generate_one_function(para_list, out_file):
 	body += "\t\tfputs(rec_buffer, __recorderfh);\n"
 	body += "\t\twritten_bytes = 0;\n}\n\n"
 	'''
+
+	body += '\t/* tm2 stands for the true exit moment of this function */\n'
+	body += '\ttm2 = recorder_wtime();\n'
 
 	body += '\treturn ret;\n'
 	body += '}\n\n'

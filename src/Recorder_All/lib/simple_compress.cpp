@@ -96,12 +96,69 @@ int SimpleCompress::consecutive_op(K & cur_func)
 			if (std::stol(last_func["offset"]) + std::stol(last_func["count"]) != std::stol(cur_func["offset"]))
 				return 1;
 		}
-		else if (cur_itor->first == "tm1")
+		else if (cur_itor->first == "tm2")
 			continue;
-		else if (cur_itor->first == "tm2") {
-			if (std::stol(cur_func["tm1"]) - std::stol(last_func["tm2"]) > 1 )	
+		else if (cur_itor->first == "tm1") {
+			// second time
+			if (last_func["tm1"] == "0.000000000") {
+//				cout << "second" << endl;
+				last_func["tm1"] = cur_func["tm1"];
+				continue;
+			}
+			const long nano = 1000000000;
+
+			string ct = cur_func["tm1"];
+			int pos = ct.find(".");
+			long ct_sec = std::stol(ct.substr(0,pos));
+			long ct_nsec = std::stol(ct.substr(pos+1));
+
+			string lt = last_func["tm1"];
+			pos = lt.find(".");
+			long lt_sec = std::stol(ct.substr(0,pos));
+			long lt_nsec = std::stol(ct.substr(pos+1));
+
+			long ct_all = ct_nsec + ct_sec * nano;
+			long lt_all = lt_nsec + lt_sec * nano;
+			long diff = lt_all - ct_all;
+			if (diff < 0)
+				diff = 0-diff;
+
+			if (diff > lt_all * 3)	// you can change this "3" to get more precise value
 				return 3;
+			// NOTE: the std::tostring(double) is not precise enough!
+			
+			// first repetition
+			if (last_func.find("repetition") == last_func.end()) {
+//				cout << "first" << endl;
+				last_func["tm1_first"] = last_func["tm1"];
+				last_func["tm1"] = "0.000000000";
+				continue;
+
+			}
 			else {
+				long times = std::stol(last_func["repetition"]);
+				// new_all average time
+				long new_all = lt_all;
+				new_all *= (times-2);
+				new_all /= (times-1);
+				new_all += ct_all/(times-1);
+
+				long new_sec = new_all / nano;
+				long new_nsec = new_all % nano;
+
+				string temp = std::to_string(new_nsec);
+				if (temp.size() != 9) {
+					int need_zero = 9-temp.size();
+
+					string temp2 = "";
+					while (need_zero--)
+						temp2 = temp2 + "0";
+
+					temp = temp2 + temp;
+				}
+
+				string new_lt = std::to_string(new_sec) + "." + temp;
+				last_func["tm1"] = new_lt;
 				last_func["tm2"] = cur_func["tm2"];
 			}
 		}
