@@ -40,15 +40,9 @@ int MPI_Finalize(void)
 {
     int ret;
 
-	/*
-    if(getenv("RECORDER_INTERNAL_TIMING"))
-        recorder_shutdown(1);
-    else
         recorder_shutdown(0);
-	*/
-
     ret = RECORDER_MPI_CALL(PMPI_Finalize)();
-	delete_sc(sc);
 
     return(ret);
 }
+

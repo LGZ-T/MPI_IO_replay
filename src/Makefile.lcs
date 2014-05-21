@@ -1,0 +1,4 @@
+all: lcs_trace
+
+lcs_trace: lcs_merge_trace.cpp datatype.cpp preprocess.h datatype.h
+	g++ -std=c++0x -g lcs_merge_trace.cpp datatype.cpp -o lcs_trace

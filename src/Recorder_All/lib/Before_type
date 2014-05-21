@@ -26,6 +26,7 @@
 
 // make it compatible with c++
 extern int recorder_mpi_initialize(int*, char***);
+extern void recorder_shutdown(int);
 extern SimpleCompress *sc;
 #define RECORDER_TYPE(name, ret, args) \
 	typedef ret (* TYPE_##name)args;

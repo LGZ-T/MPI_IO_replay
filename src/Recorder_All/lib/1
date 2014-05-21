@@ -6,7 +6,7 @@ import re
 OUTPUTFILE = 'sample_file'
 
 def generate_head(code_file, out_file):
-	data = '/* \n *This file is generated automaticaly by a wrapper generator!\n'
+	data = '/* \n *This file is generated automaticaly by wrapper generator.\n'
 	data += ' * define neccessary variables below\n'
 	data += ' */\n\n'
 
@@ -14,10 +14,9 @@ def generate_head(code_file, out_file):
 	# sc should be initialized in input header
 	data += 'SimpleCompress *sc;\n\n'
 
-	data += 'struct timespec tm1, tm2, tm3, tm4, compute_time, mpi_time, this_func_time;\n'
-	data += 'struct timespec compute_time_all, mpi_time_all, recorder_time_all;\n'
+	data += 'struct timespec tm1, tm2;\n'
 	data += 'int ret, result_len;\n'
-	data += 'char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name[100], newtype_name[100];\n'
+	data += 'char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name, newtype_name[100];\n'
 
 	# add buffer
 	data += '#define BUFFER_SIZE 4096\n'
@@ -61,7 +60,7 @@ def generate_one_function(para_list, out_file):
 	def datatype_code(datatype):
 		datatype_code = '''PMPI_Type_get_name(%(data)s, %(data)s_name, &result_len);\n
 		if (result_len == 0) {
-			sprintf(%(data)s_name, "%%lu", %(data)s);
+			sprintf(%(data)s_name, "%%ld", %(data)s);
 		}
 		'''
 		result = datatype_code % {'data' : datatype}
@@ -72,18 +71,18 @@ def generate_one_function(para_list, out_file):
 				'etype': datatype_code('etype'),
 				'filetype': datatype_code('filetype'),
 				'oldtype' : datatype_code('oldtype'),
-				'newtype': 'sprintf(newtype_name, "%lu", *newtype);\n'}
+				'newtype': 'sprintf(newtype_name, "%ld", *newtype);\n'}
 
 	para_format = {
-			'MPI_File' : '%lu',
-			'MPI_Offset' : '%lld',
+			'MPI_File' : '%ld',
+			'MPI_Offset' : '%ld',
 			'MPI_Datatype' : '%s',
 			'MPI_Comm' : '%s',
-			'MPI_Status' : '%lu',
-			'MPI_Info' : '%lu',
-			'MPI_Op' : '%lu',
-			'MPI_Request' : '%lu',
-			'MPI_Aint' : '%ld',	# I assume MPI_Aint is the equivalent of ptrdiff_t, which is long int
+			'MPI_Status' : '%ld',
+			'MPI_Info' : '%ld',
+			'MPI_Op' : '%ld',
+			'MPI_Request' : '%ld',
+			'MPI_Aint' : '%ld',
 			'int' : '%d',
 			'char' : '%s',
 			}
@@ -91,9 +90,8 @@ def generate_one_function(para_list, out_file):
 	call_para = '('
 	extra_data = ''
 	after_call = ''
-	# TODO: the tm1 tm2 written to th file is really compute_time and mpi_time
 	print_format_1 = '"tm1=%ld.%.9ld tm2=%ld.%.9ld func=' + para_list[0].lstrip('P') + ' '
-	print_format_2 = 'compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec'
+	print_format_2 = 'tm1.tv_sec, tm1.tv_nsec, tm2.tv_sec, tm2.tv_nsec'
 	call_delim = ', '
 	delim = ' '
 	para_delim = ', '
@@ -111,7 +109,7 @@ def generate_one_function(para_list, out_file):
 			# for MPI_Datatype*
 			if pointer == True and type_of_para == 'MPI_Datatype':
 				true_true_para = true_para.lstrip('*')
-				after_call += 'sprintf(%s_name, "%%lu", *' % true_true_para + true_para.lstrip('*') + ');\n'
+				after_call += 'sprintf(%s_name, "%%ld", *' + true_para.lstrip('*') + ');\n' % true_true_para
 			else:
 				extra_data += extra
 			
@@ -124,9 +122,7 @@ def generate_one_function(para_list, out_file):
 			if type_of_para == 'void' or type_of_para == 'int':
 				print_format_1 += true_para.lstrip('*') + '=' + true_para.lstrip("*") + delim
 			else:
-				#print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
-				# get address
-				print_format_1 += true_para.lstrip('*') + '=' + "%lu" + delim
+				print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 				if type_of_para == 'MPI_File': # only use address
 					#print_format_2 += ', ' + true_para
 					print_format_2 += para_delim + '*' + true_para.lstrip("*")
@@ -150,16 +146,11 @@ def generate_one_function(para_list, out_file):
 
 	body = '{\n'
 	body += '\t/* tm1 is the length of time elapsed between the IO or MPI communication calls. It\'s spend in computing */\n'
-	body += '\ttm1 = recorder_wtime();\n'
-	body += '\tcompute_time = tm1 - tm4;\n'
-	body += '\tcompute_time_all += compute_time;\n'
+	body += '\ttm1 = ts_minus(recorder_wtime(), tm2);\n'
 	body += extra_data
-	body += '\ttm2 = recorder_wtime();\n'
 	body += '\tret = RECORDER_MPI_CALL(' + para_list[0] + ')' + call_para + ';\n'
-	body += '\ttm3 = recorder_wtime();\n'
-	body += '\tmpi_time = tm3 - tm2;\n'
-	body += '\tmpi_time_all += mpi_time;\n'
 	body += after_call
+	body += '\ttm2 = ts_minus(recorder_wtime(), tm1);\n'
 
 #	body += '\tif (__recorderfh != NULL)\n'
 	body += '\tbytes = sprintf(rec_buffer + written_bytes, ' + print_format_1 + delim + print_format_2 + ');\n'
@@ -174,10 +165,8 @@ def generate_one_function(para_list, out_file):
 	body += "\t\twritten_bytes = 0;\n}\n\n"
 	'''
 
-	body += '\tthis_func_time = recorder_wtime() - tm1;\n'
-	body += '\trecorder_time_all += this_func_time - mpi_time;\n;'
-	body += '\t/* tm4 stands for the true exit moment of this function */\n'
-	body += '\ttm4 = recorder_wtime();\n'
+	body += '\t/* tm2 stands for the true exit moment of this function */\n'
+	body += '\ttm2 = recorder_wtime();\n'
 
 	body += '\treturn ret;\n'
 	body += '}\n\n'

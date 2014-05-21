@@ -134,7 +134,12 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 void post_process(const char* temp_filename, const char* filename)
 {
     ifstream fin(temp_filename);
-    ofstream fout(filename);
+    ofstream fout(filename, ios::out);
+
+    if (!fout) {
+    	cout << "Error writting merged file!" << endl;
+	return;
+    }
 
     string line;
     string last = "";
@@ -144,16 +149,18 @@ void post_process(const char* temp_filename, const char* filename)
     
     while (getline(fin, line)) {
         if (line.find("d") != 0) {
-            if (last != "")
+            if (last != "") {
                 fout << last << endl;
+		}
 
             last = line;
             continue;   // not del
         }
 
         if (last.find("d") != 0) {
-            if (last != "")
+            if (last != "") {
                 fout << last << endl;
+		}
 
             nd = 1;
             last = line;
@@ -165,18 +172,14 @@ void post_process(const char* temp_filename, const char* filename)
         cout << line << endl;
     }
     fout << last << endl;
+    cout << "Closing file..." << endl;
+    fout.close();
 }
 
-int main(void)
+int lcs_merge_two(str_hmap_list& la, int i)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
-	string a("../input_data/zhangyou_IOR/log.0");
-	string b("../input_data/zhangyou_IOR/log.1");
-	Preprocess<str_hmap_list, str_hmap> ppa(a);
-	ppa.run();	
-    ppa.data_print();
-    str_hmap_list la = ppa.get_data();
-
+	string b("../input_data/zhangyou_IOR/log." + to_string(i));
 	Preprocess<str_hmap_list, str_hmap> ppb(b);
 	ppb.run();	
     ppb.data_print();
@@ -184,13 +187,35 @@ int main(void)
 
     const char* temp_filename = "lcs_diff_output_temp";
     ofstream fout(temp_filename);
-    const char* filename = "lcs_diff_output";
+    string s_filename = "lcs/merged_lcs." + to_string(i);
+    const char * filename = s_filename.c_str();
+    cout << "filename --> " << filename << endl;
 
 	int r = find_shortest_edit(fout, la, lb);
     
-	cout << "The edit distance between strings is " << r << endl;
+	cout << "The edit distance between logs is " << r << endl;
     
     post_process(temp_filename, filename);
+    cout << "filename --> " << filename << endl;
+
+	return 0;
+}
+
+int main(int argc, char* argv[])
+{
+    	int logs = 8;
+
+	string base("../input_data/wzzhang_IOR/log.0");
+	Preprocess<str_hmap_list, str_hmap> ppa(base);
+	ppa.run();	
+    ppa.data_print();
+    str_hmap_list la = ppa.get_data();
+
+
+	for (int i=1; i<logs; i++) {
+		// merge log 0 and log i
+		lcs_merge_two(la, i);
+	}
 
 	return 0;
 }
