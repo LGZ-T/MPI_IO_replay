@@ -179,7 +179,7 @@ void post_process(const char* temp_filename, const char* filename)
 int lcs_merge_two(str_hmap_list& la, int i)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
-	string b("../input_data/zhangyou_IOR/log." + to_string(i));
+	string b("../input_data/wzzhang_IOR/log." + to_string(i));
 	Preprocess<str_hmap_list, str_hmap> ppb(b);
 	ppb.run();	
     ppb.data_print();
@@ -205,17 +205,21 @@ int main(int argc, char* argv[])
 {
     	int logs = 8;
 
-	string base("../input_data/wzzhang_IOR/log.0");
+	const char * zero = "../input_data/wzzhang_IOR/log.0";
+	string base(zero);
 	Preprocess<str_hmap_list, str_hmap> ppa(base);
 	ppa.run();	
     ppa.data_print();
     str_hmap_list la = ppa.get_data();
 
-
 	for (int i=1; i<logs; i++) {
 		// merge log 0 and log i
 		lcs_merge_two(la, i);
 	}
+	
+	// copy log.0
+	ofstream out0("lcs/merged_lcs.0");
+	ppa.data_print(out0);
 
 	return 0;
 }

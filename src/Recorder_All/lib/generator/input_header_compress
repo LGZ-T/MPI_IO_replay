@@ -122,7 +122,7 @@ void recorder_shutdown(int timing_flag)
 {
 	delete_sc(sc);
 	fflush(__recorderfh);
-	fprintf(__recorderfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all);
+//	fprintf(__recorderfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all);
     fclose(__recorderfh);
 
     return;

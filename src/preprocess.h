@@ -20,9 +20,15 @@ class Preprocess {
 private:
 	string filename;
 
+	// the inner maps is used to match arguments like fh and request
+	map<string, map<string, unsigned int>> argument_maps;
+
 	// the data structure stores each function's name, paras etc
 	T all_data;
+
 	int extract_data_from_single_line(string & line);
+
+	unsigned int build_match(string& key, string& value);
 
 	// return 0 if repetition found, 
 	// -1 if function name unmatch,
@@ -50,6 +56,9 @@ template <typename T, typename K>
 Preprocess<T, K>::Preprocess(string filename_para)
 {
 	filename = filename_para;
+	argument_maps.clear();
+	argument_maps.insert(make_pair("fh", map<string, unsigned int>()));
+	argument_maps.insert(make_pair("request", map<string, unsigned int>()));
 	std::cout << "File " << filename << std::endl;
 }
 
@@ -84,14 +93,30 @@ int Preprocess<T, K>::run()
 	return 0;
 }
 
+template<typename T, typename K>
+unsigned int Preprocess<T, K>::build_match(string& key, string& value)
+{
+	typename map<string,map<string, unsigned int>>::iterator outer_it;
+	if ((outer_it = argument_maps.find(key)) == argument_maps.end())
+		return 0;
+
+	typename map<string, unsigned int>::iterator inner_it;
+	if ((inner_it = (outer_it->second).find(value)) == (outer_it->second).end()) {
+		unsigned int num = outer_it->second.size() + 1;
+		outer_it->second.insert(make_pair(value, num));
+	}
+
+	return (outer_it->second)[value];
+}
+
 // analyze each line, note this funtion is data-specific
 template<typename T, typename K>
 int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 {
-	std::string temp, temp_value;
+	std::string key, value, temp;
 	K cur_func;
 
-	if (line == "Start tracing...")
+	if (line == "Start tracing..." || line == "Outputing all data...")
 		return 0;
 
 	// extract function's name, parameters, etc
@@ -102,7 +127,7 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 		
 		cur_para_begin = cur_para_end+1,cur_para_end = line.find(' ', cur_para_begin)){
 		
-		// TODO: boost string have built-in trim whitespace, while c++ don't
+		// TODO: boost string have built-in trim whitespace, while c++ std don't
 		// trim whitspace
 		while (line[cur_para_begin] == ' ')
 			cur_para_begin++;
@@ -110,23 +135,25 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 		size_t split_pos = temp.find('=');
 		// TODO: spilt_pos is unsigned int, always positive
 		if (split_pos >= 0) {
-			temp_value.assign(temp, split_pos+1, std::string::npos);
-			temp.assign(temp, 0, split_pos);
+			value.assign(temp, split_pos+1, std::string::npos);
+			key.assign(temp, 0, split_pos);
 		}
 		else
-			temp_value.clear();
+			value.clear();
 
 		// ignore timestamps and nullify info, status, request
-		if (temp == "tm1" || temp == "tm2")
+		if (key == "tm1" || key == "tm2" || key == "tm1_first")
 			continue;
-		if (temp == "info" || temp == "status" || temp == "request")
-			temp_value = temp;
+		if (key == "info" || key == "status" || key == "tag")
+			value = key;
 
 		// TODO: remove it later
-		if (temp == "fh")
-			temp_value = temp;
+		if (key == "fh" || key == "request") {
+			unsigned int assigned_value = build_match(key, value);
+			value = to_string(assigned_value);
+			}
 
-		cur_func.insert(pair<std::string, std::string>(temp, temp_value));
+		cur_func.insert(pair<std::string, std::string>(key, value));
 	}
 	all_data.push_back(cur_func);
 
@@ -154,9 +181,9 @@ int Preprocess<T, K>::data_print(ostream & out = cout)
 	for(titor=all_data.begin(); titor!=all_data.end(); titor++) {
 		typename K::iterator kitor;
 		for (kitor=titor->begin(); kitor!=titor->end(); kitor++){
-			out << kitor->first << " = " << kitor->second << '\t';
+			out << kitor->first << "=" << kitor->second << ' ';
 		}
-		out << std::endl << std::endl;
+		out << std::endl;
 	}
 
 	return 0;

@@ -38,14 +38,17 @@ def generate_head(code_file, out_file):
 	return
 
 
-def generate_one_function(para_list, out_file):
+def generate_one_function(para_list, out_file, func_file):
 	if len(para_list) < 3:
 		return 1
 
+	func_info = ''	# info for replay
 # generate function head
 	head = ''
 	head += para_list[1] + ' '	# return type
 	func_name = para_list[0].lstrip('P') + '('
+	func = para_list[0].lstrip('P')
+	func_info += func + ' '
 	head += func_name	# function name
 
 	for index, para in enumerate(para_list):
@@ -97,6 +100,13 @@ def generate_one_function(para_list, out_file):
 	call_delim = ', '
 	delim = ' '
 	para_delim = ', '
+
+	body = '{\n'
+	print func
+	if func == 'MPI_File_close':
+		body += '\tMPI_File real_fh = *fh;\n'
+		
+
 	for para in paras:
 		type_of_para =  str(para.split()[0])
 		true_para = str(para.split()[1])
@@ -104,6 +114,8 @@ def generate_one_function(para_list, out_file):
 		call_para += true_para.lstrip('*').rstrip('[]')
 		call_para += call_delim
 		true_para = true_para.rstrip('[]')
+
+		func_info += true_para.lstrip('*') + ' '
 
 		
 		extra = get_name.get(true_para.lstrip('*'), None)
@@ -120,8 +132,12 @@ def generate_one_function(para_list, out_file):
 			print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 			print_format_2 += para_delim + true_para.lstrip('*') + '_name'
 		elif pointer == True:
+			# char*
+			if type_of_para == 'char':
+				print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
+				print_format_2 += para_delim + true_para.lstrip('*')
 			# for void *buf, int *comm, int *size, etc.
-			if type_of_para == 'void' or type_of_para == 'int':
+			elif type_of_para == 'void' or type_of_para == 'int':
 				print_format_1 += true_para.lstrip('*') + '=' + true_para.lstrip("*") + delim
 			else:
 				#print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
@@ -129,7 +145,10 @@ def generate_one_function(para_list, out_file):
 				print_format_1 += true_para.lstrip('*') + '=' + "%lu" + delim
 				if type_of_para == 'MPI_File': # only use address
 					#print_format_2 += ', ' + true_para
-					print_format_2 += para_delim + '*' + true_para.lstrip("*")
+					if func == 'MPI_File_close':
+						print_format_2 += para_delim + 'real_fh'
+					else:
+						print_format_2 += para_delim + '*' + true_para.lstrip("*")
 				else:
 					print_format_2 += para_delim + true_para.lstrip('*')
 
@@ -148,7 +167,6 @@ def generate_one_function(para_list, out_file):
 	call_para = call_para[:-2]
 	call_para += ')'
 
-	body = '{\n'
 	body += '\t/* tm1 is the length of time elapsed between the IO or MPI communication calls. It\'s spend in computing */\n'
 	body += '\ttm1 = recorder_wtime();\n'
 	body += '\tcompute_time = tm1 - tm4;\n'
@@ -184,10 +202,11 @@ def generate_one_function(para_list, out_file):
 
 	result = head + body
 	out_file.write(result)
+	func_file.write(func_info + '\n')
 	return 0
 		
 
-def process(line, goodbye, out_file):
+def process(line, goodbye, out_file, func_file):
 	recorder_prefix = 'RECORDER_FORWARD_DECL'
 	print line	
 	if line.startswith(recorder_prefix) == False:
@@ -209,7 +228,7 @@ def process(line, goodbye, out_file):
 		if len(bone) > 0:
 			para_list += [bone]
 
-	generate_one_function(para_list, out_file)
+	generate_one_function(para_list, out_file, func_file)
 
 	return 0
 
@@ -218,10 +237,13 @@ if __name__ == '__main__':
 	output_file = open('sample_output.c', 'w')
 	input_header = open('input_header_compress')
 
+	func_file = open('func_info', 'w')
+
 	generate_head(input_header, output_file)
 	for line in input_file:
-		if process(line, '(PMPI_Finalize', output_file) == 2:
+		if process(line, '(PMPI_Finalize', output_file, func_file) == 2:
 			break
 
 	input_file.close()
 	output_file.close()
+	func_file.close()
