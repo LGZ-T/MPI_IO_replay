@@ -25,6 +25,7 @@ private:
 
 	// the data structure stores each function's name, paras etc
 	T all_data;
+	T auxiliary_data;	// for time info or sth else we're interested
 
 	int extract_data_from_single_line(string & line);
 
@@ -49,6 +50,7 @@ public:
 	// TODO: why the adding of const will cause error?
 	int data_print(ostream & out);
 	T & get_data(void);
+	T & get_auxiliary(void) { return auxiliary_data; }
 };
 
 // Important! The implementation and definition of TEMPLATE CLASS MUST put in the same FILE!!!
@@ -81,6 +83,10 @@ int Preprocess<T, K>::run()
 	int lineno = 0;
 
 	std::cout << "Running" << std::endl;
+	K empty;
+	all_data.push_back(empty);
+	auxiliary_data.push_back(empty);
+	
 	while (getline(fin,ReadLine))
 	{
 		lineno++;
@@ -115,6 +121,7 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 {
 	std::string key, value, temp;
 	K cur_func;
+	K auxiliary;
 
 	if (line == "Start tracing..." || line == "Outputing all data...")
 		return 0;
@@ -142,20 +149,26 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 			value.clear();
 
 		// ignore timestamps and nullify info, status, request
-		if (key == "tm1" || key == "tm2" || key == "tm1_first")
+		if (key == "tm1" || key == "tm2" || key == "tm1_first") {
+			auxiliary.insert(pair<std::string, std::string>(key, value));
 			continue;
+		}
 		if (key == "info" || key == "status" || key == "tag")
 			value = key;
 
 		// TODO: remove it later
-		if (key == "fh" || key == "request") {
+		if (key == "fh" || key == "request"){
 			unsigned int assigned_value = build_match(key, value);
 			value = to_string(assigned_value);
-			}
+		}
 
 		cur_func.insert(pair<std::string, std::string>(key, value));
 	}
+	if (auxiliary.empty())
+		return 1;
+
 	all_data.push_back(cur_func);
+	auxiliary_data.push_back(auxiliary);
 
 	return 0;
 }
@@ -177,12 +190,15 @@ int Preprocess<T, K>::data_print(ostream & out = cout)
 		return 1;
 	}
 
-	typename T::iterator titor;
-	for(titor=all_data.begin(); titor!=all_data.end(); titor++) {
+	typename T::iterator titor, titor2;
+	for(titor=all_data.begin(), titor2=auxiliary_data.begin(); titor!=all_data.end(); ++titor, ++titor2) {
 		typename K::iterator kitor;
-		for (kitor=titor->begin(); kitor!=titor->end(); kitor++){
+		for (kitor=titor->begin(); kitor!=titor->end(); ++kitor){
 			out << kitor->first << "=" << kitor->second << ' ';
 		}
+
+		for (kitor=titor2->begin(); kitor!=titor2->end(); ++kitor)
+			out << kitor->first << "=" << kitor->second << ' ';
 		out << std::endl;
 	}
 

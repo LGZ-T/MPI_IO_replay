@@ -10,10 +10,10 @@
 using namespace std;
 
 // well, I know it's ugly. Don't laugh. -_-!
-int display_shortest_edit_script(ostream& fout, int k, int d, int x, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b);
+int display_shortest_edit_script(ostream& fout, int k, int d, int x, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b, str_hmap_list& b_aux);
 
 // TODO: test version, find edit script of strings, final ver should read MPI traces properly
-int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b)
+int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b, str_hmap_list& a_aux, str_hmap_list& b_aux)
 {
 	const int N = a.size() - 1;
 	const int M = b.size() - 1;
@@ -48,7 +48,7 @@ int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b)
 			cout << "diagonal k=" << k << " with depth d=" << d << " stop at (" << x << "," << y << ")" << endl;
 
 			if (x>=N && y>=M) {
-				display_shortest_edit_script(fout, k, d, x, storage, a, b);
+				display_shortest_edit_script(fout, k, d, x, storage, a, b, b_aux);
 				return d;
 			}
 		}
@@ -71,7 +71,7 @@ int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b)
 	return -1;
 }
 
-int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b)
+int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b, str_hmap_list& b_aux)
 {
 	cout << endl;
 	cout << "Display here." << endl;
@@ -97,11 +97,11 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 		int middle = d-1;
 	
 		if ((*storage[d-1])[k+1+middle] == value) {
-			display_shortest_edit_script(fout, k+1, d-1, value, storage, a, b);
+			display_shortest_edit_script(fout, k+1, d-1, value, storage, a, b, b_aux);
 
 			cout << "vectical edge from (" << value << "," << (value - (k+1)) << ") to " << "(" << value << "," << value-k << ")" << endl; 
             // insert unique element in string B
-            fout << "insert " << b[value-k] << endl;
+            fout << "insert " << b[value-k] << b_aux[value-k] << endl;
 
             // output snake
             if (keep > 0)
@@ -110,7 +110,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 			break;
 		}
 		else if ((*storage[d-1])[k-1+middle] == value-1) {
-			display_shortest_edit_script(fout, k-1, d-1, value-1, storage, a, b);
+			display_shortest_edit_script(fout, k-1, d-1, value-1, storage, a, b, b_aux);
 			cout << "horizontal edge from (" << value-1 << "," << value-1-(k-1) << ") to " << "(" << value << "," << value-k << ")" << endl;
 			//fout << "delete " << value-1 << endl;
             fout << "delete 1" << endl;
@@ -176,14 +176,15 @@ void post_process(const char* temp_filename, const char* filename)
     fout.close();
 }
 
-int lcs_merge_two(str_hmap_list& la, int i)
+int lcs_merge_two(str_hmap_list& la, int i, str_hmap_list& a_aux)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
 	string b("../input_data/wzzhang_IOR/log." + to_string(i));
 	Preprocess<str_hmap_list, str_hmap> ppb(b);
 	ppb.run();	
     ppb.data_print();
-    str_hmap_list lb = ppb.get_data();
+    str_hmap_list& lb = ppb.get_data();
+    str_hmap_list& b_aux = ppb.get_auxiliary();
 
     const char* temp_filename = "lcs_diff_output_temp";
     ofstream fout(temp_filename);
@@ -191,7 +192,7 @@ int lcs_merge_two(str_hmap_list& la, int i)
     const char * filename = s_filename.c_str();
     cout << "filename --> " << filename << endl;
 
-	int r = find_shortest_edit(fout, la, lb);
+	int r = find_shortest_edit(fout, la, lb, a_aux, b_aux);
     
 	cout << "The edit distance between logs is " << r << endl;
     
@@ -210,11 +211,12 @@ int main(int argc, char* argv[])
 	Preprocess<str_hmap_list, str_hmap> ppa(base);
 	ppa.run();	
     ppa.data_print();
-    str_hmap_list la = ppa.get_data();
+    str_hmap_list& la = ppa.get_data();
+    str_hmap_list& a_aux = ppa.get_auxiliary();
 
 	for (int i=1; i<logs; i++) {
 		// merge log 0 and log i
-		lcs_merge_two(la, i);
+		lcs_merge_two(la, i, a_aux);
 	}
 	
 	// copy log.0

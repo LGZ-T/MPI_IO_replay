@@ -26,9 +26,9 @@ ostream& operator<<(ostream& os, const str_hmap& sh)
 
 	for (iter=sh.begin(); iter!=sh.end(); ++iter) {
 //		if (iter->first == string("func"))
-			os << iter->first << "=" << iter->second << '\t';
+			os << iter->first << "=" << iter->second << ' ';
 	}
-	os << endl;
+//	os << endl;
 
 	return os;
 }

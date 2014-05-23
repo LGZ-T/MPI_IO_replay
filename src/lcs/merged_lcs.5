@@ -1,21 +1,21 @@
 keep 2
 delete 1
-insert buf=buf	comm=MPI_COMM_WORLD	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	
+insert buf=buf	comm=MPI_COMM_WORLD	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	tm1=0.000129004	tm2=0.000063522	
 keep 8
 delete 1
-insert buf=buf	comm=	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	
+insert buf=buf	comm=	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	tm1=0.000402390	tm2=0.000001999	
 keep 3
 delete 1
-insert amode=41	comm=MPI_COMM_SELF	fh=1	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	
+insert amode=41	comm=MPI_COMM_SELF	fh=1	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	tm1=0.000115676	tm2=0.001572402	
 keep 3
 delete 2
-insert amode=2	comm=	fh=2	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	
-insert fh=2	func=MPI_File_close	
+insert amode=2	comm=	fh=2	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	tm1=0.000004230	tm2=0.000505567	
+insert fh=2	func=MPI_File_close	tm1=0.000028144	tm2=0.000211268	
 keep 14
 delete 5
-insert amode=41	comm=MPI_COMM_SELF	fh=3	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	
-insert buf=buf	count=131072	datatype=MPI_BYTE	fh=3	func=MPI_File_read_at	offset=134086656	original_offset=0	repetition=1024	status=status	
-insert fh=3	func=MPI_File_close	
-insert amode=2	comm=	fh=2	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	
-insert fh=2	func=MPI_File_close	
+insert amode=41	comm=MPI_COMM_SELF	fh=3	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	tm1=0.000004309	tm2=0.000170098	
+insert buf=buf	count=131072	datatype=MPI_BYTE	fh=3	func=MPI_File_read_at	offset=134086656	original_offset=0	repetition=1024	status=status	tm1=0.000000433	tm1_first=0.000233356	tm2=0.000032058	
+insert fh=3	func=MPI_File_close	tm1=0.000026406	tm2=0.000023891	
+insert amode=2	comm=	fh=2	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000005	func=MPI_File_open	info=info	tm1=0.000001324	tm2=0.016452314	
+insert fh=2	func=MPI_File_close	tm1=0.000006371	tm2=0.000019876	
 keep 15
