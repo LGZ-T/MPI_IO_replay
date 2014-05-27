@@ -1,4 +1,27 @@
-all: lcs_trace
+CXXFLAGS = -g -std=c++0x -O2
+CXX = g++
 
-lcs_trace: lcs_merge_trace.cpp datatype.cpp preprocess.h datatype.h
-	g++ -std=c++0x -g lcs_merge_trace.cpp datatype.cpp -o lcs_trace
+all: lcs_trace replay
+
+replay: replay.o datatype.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+lcs_trace: lcs_merge_trace.o datatype.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lrt
+
+replay.o lcs_trace.o: preprocess.h datatype.h
+datatype.o : datatype.h
+
+datatype.o: datatype.cpp
+	$(CXX) $(CXXFLAGS) $^ -c
+
+replay.o: replay.cpp
+	$(CXX) $(CXXFLAGS) $^ -c
+
+lcs_trace.o: lcs_trace.cpp
+	$(CXX) $(CXXFLAGS) lcs_trace.cpp -c
+
+clean:
+	rm datatype.o lcs_merge_trace.o replay.o lcs_trace replay
+
+.PHONY: clean

@@ -6,7 +6,8 @@ import re
 OUTPUTFILE = 'sample_file'
 
 def generate_head(code_file, out_file):
-	data = '/* \n *This file is generated automaticaly by a wrapper generator!\n'
+	data = '/* \n *This file is generated automaticaly by a wrapper generator,\n'
+	data += ' * do not edit it manually.\n'
 	data += ' * define neccessary variables below\n'
 	data += ' */\n\n'
 
@@ -16,9 +17,10 @@ def generate_head(code_file, out_file):
 
 	data += 'struct timespec tm1, tm2, tm3, tm4, compute_time, mpi_time, this_func_time;\n'
 	data += 'struct timespec compute_time_all, mpi_time_all, recorder_time_all;\n'
-	data += 'int ret, result_len;\n'
+	data += 'int ret, result_len, array_size, s_offset;\n'
 	data += 'char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name[100], newtype_name[100];\n'
-
+	data += '#define AS 300000\n'
+	data += 'char array_of_gsizes_arraystore[AS], array_of_distribs_arraystore[AS], array_of_dargs_arraystore[AS], array_of_psizes_arraystore[AS], array_of_sizes_arraystore[AS], array_of_subsizes_arraystore[AS], array_of_starts_arraystore[AS], array_of_blocklengths_arraystore[AS], array_of_displacements_arraystore[AS], array_of_types_arraystore[AS];\n'
 	# add buffer
 	data += '#define BUFFER_SIZE 4096\n'
 	data += 'const int threshold = BUFFER_SIZE * 0.9;\n'
@@ -100,6 +102,8 @@ def generate_one_function(para_list, out_file, func_file):
 	call_delim = ', '
 	delim = ' '
 	para_delim = ', '
+	get_array_size = ''
+	get_array_content = ''
 
 	body = '{\n'
 	print func
@@ -111,6 +115,7 @@ def generate_one_function(para_list, out_file, func_file):
 		type_of_para =  str(para.split()[0])
 		true_para = str(para.split()[1])
 		pointer = true_para.startswith('*')
+		array = true_para.endswith('[]')
 		call_para += true_para.lstrip('*').rstrip('[]')
 		call_para += call_delim
 		true_para = true_para.rstrip('[]')
@@ -119,7 +124,7 @@ def generate_one_function(para_list, out_file, func_file):
 
 		
 		extra = get_name.get(true_para.lstrip('*'), None)
-		if extra is not None:
+		if extra is not None and array == False:
 			# for MPI_Datatype*
 			if pointer == True and type_of_para == 'MPI_Datatype':
 				true_true_para = true_para.lstrip('*')
@@ -131,7 +136,8 @@ def generate_one_function(para_list, out_file, func_file):
 			
 			print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 			print_format_2 += para_delim + true_para.lstrip('*') + '_name'
-		elif pointer == True:
+		elif pointer == True and array == False:
+			# TODO: process array here
 			# char*
 			if type_of_para == 'char':
 				print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
@@ -152,6 +158,23 @@ def generate_one_function(para_list, out_file, func_file):
 				else:
 					print_format_2 += para_delim + true_para.lstrip('*')
 
+		elif pointer == False and array == True:
+			true_para.rstrip('[]')
+			if func.endswith('array'):
+				get_array_size = 'array_size = ndims;\n'
+			else:
+				get_array_size = 'array_size = count;\n'
+			get_array_content += 's_offset += sprintf(' + true_para + '_arraystore+s_offset, "%d-", array_size);\n' 
+			if type_of_para != 'MPI_Datatype':
+				get_array_content += 'for(int i=0; i<array_size; i++) {\n'
+				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, "' + para_format.get(type_of_para, 'Error') + '", ' + '*' + true_para+'+sizeof(' + type_of_para + ')*i' + ');\n'
+				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, ' + '"-");\n'
+				get_array_content += '}\n'
+				get_array_content += 's_offset = 0;\n'
+			else:
+				pass # TODO
+			print_format_1 += true_para.lstrip('*') + '=' + "%s" + delim
+			print_format_2 += para_delim + true_para + '_arraystore'
 		else:
 			print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 			if type_of_para == 'MPI_File':
@@ -172,6 +195,8 @@ def generate_one_function(para_list, out_file, func_file):
 	body += '\tcompute_time = tm1 - tm4;\n'
 	body += '\tcompute_time_all += compute_time;\n'
 	body += extra_data
+	body += get_array_size
+	body += get_array_content
 	body += '\ttm2 = recorder_wtime();\n'
 	body += '\tret = RECORDER_MPI_CALL(' + para_list[0] + ')' + call_para + ';\n'
 	body += '\ttm3 = recorder_wtime();\n'
@@ -180,9 +205,10 @@ def generate_one_function(para_list, out_file, func_file):
 	body += after_call
 
 #	body += '\tif (__recorderfh != NULL)\n'
-	body += '\tbytes = sprintf(rec_buffer + written_bytes, ' + print_format_1 + delim + print_format_2 + ');\n'
-	body += '\tread_func(sc, rec_buffer);\n'
-	body += '\twrite_or_compress(sc);\n'
+	#body += '\tbytes = sprintf(rec_buffer + written_bytes, ' + print_format_1 + delim + print_format_2 + ');\n'
+	body += '\tbytes = fprintf(__recorderfh, ' + print_format_1 + delim + print_format_2 + ');\n'
+	#body += '\tread_func(sc, rec_buffer);\n'
+	#body += '\twrite_or_compress(sc);\n'
 
 	''' 
 	does not need buffer here

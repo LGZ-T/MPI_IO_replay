@@ -1,5 +1,6 @@
 /* 
- *This file is generated automaticaly by a wrapper generator!
+ *This file is generated automaticaly by a wrapper generator,
+ * do not edit it manually.
  * define neccessary variables below
  */
 
@@ -8,8 +9,10 @@ SimpleCompress *sc;
 
 struct timespec tm1, tm2, tm3, tm4, compute_time, mpi_time, this_func_time;
 struct timespec compute_time_all, mpi_time_all, recorder_time_all;
-int ret, result_len;
+int ret, result_len, array_size, s_offset;
 char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name[100], newtype_name[100];
+#define AS 300000
+char array_of_gsizes_arraystore[AS], array_of_distribs_arraystore[AS], array_of_dargs_arraystore[AS], array_of_psizes_arraystore[AS], array_of_sizes_arraystore[AS], array_of_subsizes_arraystore[AS], array_of_starts_arraystore[AS], array_of_blocklengths_arraystore[AS], array_of_displacements_arraystore[AS], array_of_types_arraystore[AS];
 #define BUFFER_SIZE 4096
 const int threshold = BUFFER_SIZE * 0.9;
 int bytes, written_bytes;
@@ -48,12 +51,14 @@ char rec_buffer[4096];
 
 extern char* __progname;
 FILE *__recorderfh;
+FILE *__auxiliaryfh;	// store the overall time info of each program and the speed of the machine
 
 struct timespec ts;
+struct timespec begin, end;
 
 struct timespec recorder_wtime(void)
 {
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
     	return ts;
 }
@@ -108,6 +113,8 @@ void recorder_mpi_initialize(int *argc, char ***argv)
     int nprocs;
     int rank;
 
+    begin = recorder_wtime();
+
     RECORDER_MPI_CALL(PMPI_Comm_size)(MPI_COMM_WORLD, &nprocs);
     RECORDER_MPI_CALL(PMPI_Comm_rank)(MPI_COMM_WORLD, &rank);
 
@@ -118,11 +125,17 @@ void recorder_mpi_initialize(int *argc, char ***argv)
     char cuser[L_cuserid] = {0};
     cuserid(cuser);
 
-    sprintf(logdir_name,"%s_%s",cuser, __progname);
+	time_t tt = time(NULL);
+	struct tm *h = localtime(&tt);
+    sprintf(logdir_name,"%s_%s_%02d%02d%02d",cuser, __progname, h->tm_mon, h->tm_mday, h->tm_hour);
     int status;
     status = mkdir(logdir_name, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     sprintf(logfile_name,"%s/log.%d",logdir_name,rank);
     __recorderfh=fopen(logfile_name,"w");
+
+    char *aux_file_name = (char*)malloc(PATH_MAX);
+    sprintf(aux_file_name, "%s/aux.%d", logdir_name, rank);
+    __auxiliaryfh = fopen(aux_file_name, "w");
 
     printf(" logfile_name %s ,recorderfh %d\n",logfile_name,__recorderfh);
 
@@ -132,15 +145,32 @@ void recorder_mpi_initialize(int *argc, char ***argv)
     free(logfile_name);
     free(logdir_name);
 
+    tm4 = recorder_wtime();
+
     return;
 }
 
 void recorder_shutdown(int timing_flag)
 {
+	end = recorder_wtime();
+	struct timespec all = end - begin;
+
 	delete_sc(sc);
 	fflush(__recorderfh);
-//	fprintf(__recorderfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all);
     fclose(__recorderfh);
+
+    struct timespec start_time = recorder_wtime();
+    for (int i=0; i<1000000000; i++)
+    	;
+	struct timespec end_time = recorder_wtime();
+	struct timespec loop_time = end_time - start_time;
+	long nano = loop_time.tv_nsec + loop_time.tv_sec * 1000000000;
+	double ratio = (double)nano / 1000000000;
+
+	fprintf(__auxiliaryfh, "Ratio=%lf\n", ratio);
+	fprintf(__auxiliaryfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all);
+	fprintf(__auxiliaryfh, "All_time=%ld.%09ld", all.tv_sec, all.tv_nsec);
+	fclose(__auxiliaryfh);
 
     return;
 }
@@ -161,9 +191,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ibsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ibsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -188,9 +216,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Irsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Irsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -215,9 +241,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Issend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Issend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -242,9 +266,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Isend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Isend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -269,9 +291,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Irecv buf=buf count=%d datatype=%s source=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Irecv buf=buf count=%d datatype=%s source=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -296,9 +316,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Send buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Send buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -323,9 +341,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Send_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Send_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -345,9 +361,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Sendrecv sendbuf=sendbuf sendcount=%d sendtype=%s dest=%d sendtag=%d recvbuf=recvbuf recvcount=%d recvtype=%s source=%d recvtag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, dest, sendtag, recvcount, recvtype, source, recvtag, comm_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Sendrecv sendbuf=sendbuf sendcount=%d sendtype=%s dest=%d sendtag=%d recvbuf=recvbuf recvcount=%d recvtype=%s source=%d recvtag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, dest, sendtag, recvcount, recvtype, source, recvtag, comm_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -372,9 +386,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Sendrecv_replace buf=buf count=%d datatype=%s dest=%d sendtag=%d source=%d recvtag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, sendtag, source, recvtag, comm_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Sendrecv_replace buf=buf count=%d datatype=%s dest=%d sendtag=%d source=%d recvtag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, sendtag, source, recvtag, comm_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -399,9 +411,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ssend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ssend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -426,9 +436,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ssend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Ssend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -453,9 +461,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Rsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Rsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -480,9 +486,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Rsend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Rsend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -507,9 +511,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bsend buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -534,9 +536,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bsend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bsend_init buf=buf count=%d datatype=%s dest=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, dest, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -555,9 +555,7 @@ int MPI_Start(MPI_Request *request)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Start request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Start request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -582,9 +580,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Recv buf=buf count=%d datatype=%s source=%d tag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Recv buf=buf count=%d datatype=%s source=%d tag=%d comm=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -609,9 +605,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Recv_init buf=buf count=%d datatype=%s source=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Recv_init buf=buf count=%d datatype=%s source=%d tag=%d comm=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, source, tag, comm_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -636,9 +630,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allreduce sendbuf=sendbuf recvbuf=recvbuf count=%d datatype=%s op=%lu comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, op, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allreduce sendbuf=sendbuf recvbuf=recvbuf count=%d datatype=%s op=%lu comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, op, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -658,9 +650,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allgather sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allgather sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -680,9 +670,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allgatherv sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=recvcount displs=displs recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvtype, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Allgatherv sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=recvcount displs=displs recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvtype, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -702,9 +690,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoall sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoall sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -724,9 +710,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoallv sendbuf=sendbuf sendcounts=sendcounts sdispls=sdispls sendtype=%s recvbuf=recvbuf recvcounts=recvcounts rdispls=rdispls recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtype, recvtype, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoallv sendbuf=sendbuf sendcounts=sendcounts sdispls=sdispls sendtype=%s recvbuf=recvbuf recvcounts=recvcounts rdispls=rdispls recvtype=%s comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtype, recvtype, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -746,9 +730,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoallw sendbuf=sendbuf sendcounts=sendcounts sdispls=sdispls sendtypes=%lu recvbuf=recvbuf recvcounts=recvcounts rdispls=rdispls recvtypes=%lu comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtypes, recvtypes, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Alltoallw sendbuf=sendbuf sendcounts=sendcounts sdispls=sdispls sendtypes=%lu recvbuf=recvbuf recvcounts=recvcounts rdispls=rdispls recvtypes=%lu comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtypes, recvtypes, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -768,9 +750,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Barrier comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Barrier comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -790,9 +770,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Gather sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Gather sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -812,9 +790,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Gatherv sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcounts=recvcounts displs=displs recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvtype, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Gatherv sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcounts=recvcounts displs=displs recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvtype, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -834,9 +810,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Scatter sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Scatter sendbuf=sendbuf sendcount=%d sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendcount, sendtype, recvcount, recvtype, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -856,9 +830,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Scatterv sendbuf=sendbuf sendcounts=sendcounts displs=displs sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtype, recvcount, recvtype, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Scatterv sendbuf=sendbuf sendcounts=sendcounts displs=displs sendtype=%s recvbuf=recvbuf recvcount=%d recvtype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, sendtype, recvcount, recvtype, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -877,9 +849,7 @@ int MPI_Wait(MPI_Request *request,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Wait request=%lu status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, request, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Wait request=%lu status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, request, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -898,9 +868,7 @@ int MPI_Waitall(int count,MPI_Request *array_of_requests,MPI_Status *array_of_st
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitall count=%d array_of_requests=%lu array_of_statuses=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests, array_of_statuses);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitall count=%d array_of_requests=%lu array_of_statuses=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests, array_of_statuses);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -919,9 +887,7 @@ int MPI_Waitany(int count,MPI_Request *array_of_requests,int *index,MPI_Status *
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitany count=%d array_of_requests=%lu index=index status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitany count=%d array_of_requests=%lu index=index status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -940,9 +906,7 @@ int MPI_Waitsome(int incount,MPI_Request *array_of_requests,int *outcount,int *a
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitsome incount=%d array_of_requests=%lu outcount=outcount array_of_indices=array_of_indices array_of_statuses=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, incount, array_of_requests, array_of_statuses);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Waitsome incount=%d array_of_requests=%lu outcount=outcount array_of_indices=array_of_indices array_of_statuses=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, incount, array_of_requests, array_of_statuses);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -967,9 +931,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bcast buffer=buffer count=%d datatype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Bcast buffer=buffer count=%d datatype=%s root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -994,9 +956,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Reduce sendbuf=sendbuf recvbuf=recvbuf count=%d datatype=%s op=%lu root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, op, root, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Reduce sendbuf=sendbuf recvbuf=recvbuf count=%d datatype=%s op=%lu root=%d comm=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, datatype_name, op, root, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1016,9 +976,7 @@ int MPI_File_close(MPI_File *fh)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_close fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, real_fh);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_close fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, real_fh);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1042,9 +1000,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread_at fh=%lu offset=%lld buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread_at fh=%lu offset=%lld buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1068,9 +1024,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1094,9 +1048,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread_shared fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iread_shared fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1120,9 +1072,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite_at fh=%lu offset=%lld buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite_at fh=%lu offset=%lld buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1146,9 +1096,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1172,9 +1120,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite_shared fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_iwrite_shared fh=%lu buf=buf count=%d datatype=%s request=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, request);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1194,9 +1140,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_open comm=%s filename=%s amode=%d info=%lu fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name, filename, amode, info, *fh);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_open comm=%s filename=%s amode=%d info=%lu fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name, filename, amode, info, *fh);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1220,9 +1164,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1246,9 +1188,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1272,9 +1212,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1298,9 +1236,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all_begin fh=%lu offset=%lld buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all_begin fh=%lu offset=%lld buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1324,9 +1260,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1350,9 +1284,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1376,9 +1308,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1402,9 +1332,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1428,9 +1356,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_shared fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_shared fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1459,9 +1385,7 @@ PMPI_Type_get_name(etype, etype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_view fh=%lu disp=%lld etype=%s filetype=%s datarep=%s info=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, disp, etype_name, filetype_name, datarep, info);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_view fh=%lu disp=%lld etype=%s filetype=%s datarep=%s info=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, disp, etype_name, filetype_name, datarep, info);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1480,9 +1404,7 @@ int MPI_File_sync(MPI_File fh)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_sync fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_sync fh=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1506,9 +1428,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1532,9 +1452,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1558,9 +1476,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all_begin fh=%lu offset=%lld buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all_begin fh=%lu offset=%lld buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1584,9 +1500,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1610,9 +1524,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at fh=%lu offset=%lld buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1636,9 +1548,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1662,9 +1572,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered_begin fh=%lu buf=buf count=%d datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1688,9 +1596,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1714,9 +1620,7 @@ PMPI_Type_get_name(datatype, datatype_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_shared fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_shared fh=%lu buf=buf count=%d datatype=%s status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, count, datatype_name, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1735,9 +1639,7 @@ int MPI_File_read_all_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1756,9 +1658,7 @@ int MPI_File_read_at_all_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_at_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1777,9 +1677,7 @@ int MPI_File_read_ordered_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_read_ordered_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1798,9 +1696,7 @@ int MPI_File_write_all_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1819,9 +1715,7 @@ int MPI_File_write_at_all_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_at_all_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1840,9 +1734,7 @@ int MPI_File_write_ordered_end(MPI_File fh,void *buf,MPI_Status *status)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_write_ordered_end fh=%lu buf=buf status=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, status);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1861,9 +1753,7 @@ int MPI_File_set_size(MPI_File fh,MPI_Offset size)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_size fh=%lu size=%lld \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, size);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_size fh=%lu size=%lld \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, size);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1882,9 +1772,7 @@ int MPI_File_seek(MPI_File fh,MPI_Offset offset,int whence)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_seek fh=%lu offset=%lld whence=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, whence);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_seek fh=%lu offset=%lld whence=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, whence);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1903,9 +1791,7 @@ int MPI_File_seek_shared(MPI_File fh,MPI_Offset offset,int whence)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_seek_shared fh=%lu offset=%lld whence=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, whence);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_seek_shared fh=%lu offset=%lld whence=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, offset, whence);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1924,9 +1810,7 @@ int MPI_File_preallocate(MPI_File fh,MPI_Offset size)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_preallocate fh=%lu size=%lld \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, size);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_preallocate fh=%lu size=%lld \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, size);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1945,9 +1829,7 @@ int MPI_File_set_atomicity(MPI_File fh,int flag)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_atomicity fh=%lu flag=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, flag);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_File_set_atomicity fh=%lu flag=%d \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, fh, flag);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1967,9 +1849,7 @@ int MPI_Type_commit(MPI_Datatype *datatype)
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(datatype_name, "%lu", *datatype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_commit datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_commit datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -1994,9 +1874,7 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_contiguous count=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_contiguous count=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2015,15 +1893,38 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 		if (result_len == 0) {
 			sprintf(oldtype_name, "%lu", oldtype);
 		}
-			tm2 = recorder_wtime();
+		array_size = ndims;
+s_offset += sprintf(array_of_gsizes_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_gsizes_arraystore+s_offset, "%d", *array_of_gsizes+sizeof(int)*i);
+	s_offset += sprintf(array_of_gsizes_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_distribs_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_distribs_arraystore+s_offset, "%d", *array_of_distribs+sizeof(int)*i);
+	s_offset += sprintf(array_of_distribs_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_dargs_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_dargs_arraystore+s_offset, "%d", *array_of_dargs+sizeof(int)*i);
+	s_offset += sprintf(array_of_dargs_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_psizes_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_psizes_arraystore+s_offset, "%d", *array_of_psizes+sizeof(int)*i);
+	s_offset += sprintf(array_of_psizes_arraystore+s_offset, "-");
+}
+s_offset = 0;
+	tm2 = recorder_wtime();
 	ret = RECORDER_MPI_CALL(PMPI_Type_create_darray)(size, rank, ndims, array_of_gsizes, array_of_distribs, array_of_dargs, array_of_psizes, order, oldtype, newtype);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_darray size=%d rank=%d ndims=%d array_of_gsizes=%d array_of_distribs=%d array_of_dargs=%d array_of_psizes=%d order=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, size, rank, ndims, array_of_gsizes, array_of_distribs, array_of_dargs, array_of_psizes, order, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_darray size=%d rank=%d ndims=%d array_of_gsizes=%s array_of_distribs=%s array_of_dargs=%s array_of_psizes=%s order=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, size, rank, ndims, array_of_gsizes_arraystore, array_of_distribs_arraystore, array_of_dargs_arraystore, array_of_psizes_arraystore, order, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2042,15 +1943,26 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 		if (result_len == 0) {
 			sprintf(oldtype_name, "%lu", oldtype);
 		}
-			tm2 = recorder_wtime();
+		array_size = count;
+s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "%d", *array_of_blocklengths+sizeof(int)*i);
+	s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%ld", *array_of_displacements+sizeof(MPI_Aint)*i);
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "-");
+}
+s_offset = 0;
+	tm2 = recorder_wtime();
 	ret = RECORDER_MPI_CALL(PMPI_Type_create_hindexed)(count, array_of_blocklengths, array_of_displacements, oldtype, newtype);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_hindexed count=%d array_of_blocklengths=%d array_of_displacements=%ld oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_blocklengths, array_of_displacements, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_hindexed count=%d array_of_blocklengths=%s array_of_displacements=%s oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_blocklengths_arraystore, array_of_displacements_arraystore, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2075,9 +1987,7 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_hvector count=%d blocklength=%d stride=%ld oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, blocklength, stride, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_hvector count=%d blocklength=%d stride=%ld oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, blocklength, stride, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2096,15 +2006,20 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 		if (result_len == 0) {
 			sprintf(oldtype_name, "%lu", oldtype);
 		}
-			tm2 = recorder_wtime();
+		array_size = count;
+s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%d", *array_of_displacements+sizeof(int)*i);
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "-");
+}
+s_offset = 0;
+	tm2 = recorder_wtime();
 	ret = RECORDER_MPI_CALL(PMPI_Type_create_indexed_block)(count, blocklength, array_of_displacements, oldtype, newtype);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_indexed_block count=%d blocklength=%d array_of_displacements=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, blocklength, array_of_displacements, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_indexed_block count=%d blocklength=%d array_of_displacements=%s oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, blocklength, array_of_displacements_arraystore, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2129,9 +2044,7 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_resized oldtype=%s lb=%ld extent=%ld newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, oldtype_name, lb, extent, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_resized oldtype=%s lb=%ld extent=%ld newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, oldtype_name, lb, extent, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2145,15 +2058,27 @@ int MPI_Type_create_struct(int count,int array_of_blocklengths[],MPI_Aint array_
 	tm1 = recorder_wtime();
 	compute_time = tm1 - tm4;
 	compute_time_all += compute_time;
+array_size = count;
+s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "%d", *array_of_blocklengths+sizeof(int)*i);
+	s_offset += sprintf(array_of_blocklengths_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "%ld", *array_of_displacements+sizeof(MPI_Aint)*i);
+	s_offset += sprintf(array_of_displacements_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_types_arraystore+s_offset, "%d-", array_size);
 	tm2 = recorder_wtime();
 	ret = RECORDER_MPI_CALL(PMPI_Type_create_struct)(count, array_of_blocklengths, array_of_displacements, array_of_types, newtype);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_struct count=%d array_of_blocklengths=%d array_of_displacements=%ld array_of_types=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_blocklengths, array_of_displacements, array_of_types, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_struct count=%d array_of_blocklengths=%s array_of_displacements=%s array_of_types=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_blocklengths_arraystore, array_of_displacements_arraystore, array_of_types_arraystore, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2172,15 +2097,32 @@ PMPI_Type_get_name(oldtype, oldtype_name, &result_len);
 		if (result_len == 0) {
 			sprintf(oldtype_name, "%lu", oldtype);
 		}
-			tm2 = recorder_wtime();
+		array_size = ndims;
+s_offset += sprintf(array_of_sizes_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_sizes_arraystore+s_offset, "%d", *array_of_sizes+sizeof(int)*i);
+	s_offset += sprintf(array_of_sizes_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_subsizes_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_subsizes_arraystore+s_offset, "%d", *array_of_subsizes+sizeof(int)*i);
+	s_offset += sprintf(array_of_subsizes_arraystore+s_offset, "-");
+}
+s_offset = 0;
+s_offset += sprintf(array_of_starts_arraystore+s_offset, "%d-", array_size);
+for(int i=0; i<array_size; i++) {
+	s_offset += sprintf(array_of_starts_arraystore+s_offset, "%d", *array_of_starts+sizeof(int)*i);
+	s_offset += sprintf(array_of_starts_arraystore+s_offset, "-");
+}
+s_offset = 0;
+	tm2 = recorder_wtime();
 	ret = RECORDER_MPI_CALL(PMPI_Type_create_subarray)(ndims, array_of_sizes, array_of_subsizes, array_of_starts, order, oldtype, newtype);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_subarray ndims=%d array_of_sizes=%d array_of_subsizes=%d array_of_starts=%d order=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, ndims, array_of_sizes, array_of_subsizes, array_of_starts, order, oldtype_name, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_create_subarray ndims=%d array_of_sizes=%s array_of_subsizes=%s array_of_starts=%s order=%d oldtype=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, ndims, array_of_sizes_arraystore, array_of_subsizes_arraystore, array_of_starts_arraystore, order, oldtype_name, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2200,9 +2142,7 @@ int MPI_Type_dup(MPI_Datatype type,MPI_Datatype *newtype)
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(newtype_name, "%lu", *newtype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_dup type=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, type, newtype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_dup type=%s newtype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, type, newtype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2222,9 +2162,7 @@ int MPI_Type_free(MPI_Datatype *datatype)
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
 sprintf(datatype_name, "%lu", *datatype);
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_free datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, datatype_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Type_free datatype=%s \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, datatype_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2243,9 +2181,7 @@ int MPI_Startall(int count,MPI_Request *array_of_requests)
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Startall count=%d array_of_requests=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Startall count=%d array_of_requests=%lu \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, count, array_of_requests);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2265,9 +2201,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Comm_rank comm=%s rank=rank \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Comm_rank comm=%s rank=rank \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */
@@ -2287,9 +2221,7 @@ PMPI_Comm_get_name(comm, comm_name, &result_len);
 	tm3 = recorder_wtime();
 	mpi_time = tm3 - tm2;
 	mpi_time_all += mpi_time;
-	bytes = sprintf(rec_buffer + written_bytes, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Comm_size comm=%s size=size \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
-	read_func(sc, rec_buffer);
-	write_or_compress(sc);
+	bytes = fprintf(__recorderfh, "tm1=%ld.%.9ld tm2=%ld.%.9ld func=MPI_Comm_size comm=%s size=size \n",  compute_time.tv_sec, compute_time.tv_nsec, mpi_time.tv_sec, mpi_time.tv_nsec, comm_name);
 	this_func_time = recorder_wtime() - tm1;
 	recorder_time_all += this_func_time - mpi_time;
 ;	/* tm4 stands for the true exit moment of this function */

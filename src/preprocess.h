@@ -8,6 +8,7 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <boost/algorithm/string/predicate.hpp>
 #include "datatype.h"
 
 using namespace std;
@@ -21,15 +22,23 @@ private:
 	string filename;
 
 	// the inner maps is used to match arguments like fh and request
-	map<string, map<string, unsigned int>> argument_maps;
+	map<string, map<string, unsigned int> > argument_maps;
 
 	// the data structure stores each function's name, paras etc
 	T all_data;
 	T auxiliary_data;	// for time info or sth else we're interested
 
-	int extract_data_from_single_line(string & line);
+	int extract_data_from_single_line(string & line, int pos);
 
-	unsigned int build_match(string& key, string& value);
+	unsigned int build_match(string& key, string& value, bool first);
+	int reorder(string func, string key, int temp_value, int pos, int* result);
+
+	bool first; // this state should be true if and only if it is reading the raw logs!
+	int procs;
+	int rank;	// the value of rank relies on the last number of filename!
+	int state;	// reorder arg, ugly..
+	int counter;
+	int barrier;
 
 	// return 0 if repetition found, 
 	// -1 if function name unmatch,
@@ -41,7 +50,7 @@ private:
 //	int push_with_simple_compress(K & cur_func);	No longer needed
 
 public:
-	Preprocess(string filename_para);
+	Preprocess(string filename_para, int nprocs_para, int rank_para, bool first_para);
 //	~Preprocess();
 
 	// return 0 if success
@@ -49,18 +58,25 @@ public:
 	int run();
 	// TODO: why the adding of const will cause error?
 	int data_print(ostream & out);
+	int data_print_pure(ostream & out);
 	T & get_data(void);
 	T & get_auxiliary(void) { return auxiliary_data; }
 };
 
 // Important! The implementation and definition of TEMPLATE CLASS MUST put in the same FILE!!!
 template <typename T, typename K>
-Preprocess<T, K>::Preprocess(string filename_para)
+Preprocess<T, K>::Preprocess(string filename_para, int procs_para, int rank_para, bool first_para = false)
 {
+	first = first_para;
 	filename = filename_para;
+	rank = rank_para;
+	procs = procs_para;
+	state = 1;
+	counter = 0;
+	barrier = 0;
 	argument_maps.clear();
 	argument_maps.insert(make_pair("fh", map<string, unsigned int>()));
-	argument_maps.insert(make_pair("request", map<string, unsigned int>()));
+	argument_maps.insert(make_pair("datatype", map<string, unsigned int>()));
 	std::cout << "File " << filename << std::endl;
 }
 
@@ -90,8 +106,8 @@ int Preprocess<T, K>::run()
 	while (getline(fin,ReadLine))
 	{
 		lineno++;
-		std::cout << lineno << '\t' << ReadLine << std::endl;
-		Preprocess::extract_data_from_single_line(ReadLine);
+		//std::cout << lineno << '\t' << ReadLine << std::endl;
+		Preprocess::extract_data_from_single_line(ReadLine, lineno);
 //		if (lineno > 100)
 //			break;
 	}
@@ -100,24 +116,53 @@ int Preprocess<T, K>::run()
 }
 
 template<typename T, typename K>
-unsigned int Preprocess<T, K>::build_match(string& key, string& value)
+unsigned int Preprocess<T, K>::build_match(string& key, string& value, bool free)
 {
-	typename map<string,map<string, unsigned int>>::iterator outer_it;
+	typename map<string,map<string, unsigned int> >::iterator outer_it;
 	if ((outer_it = argument_maps.find(key)) == argument_maps.end())
 		return 0;
-
+	
 	typename map<string, unsigned int>::iterator inner_it;
 	if ((inner_it = (outer_it->second).find(value)) == (outer_it->second).end()) {
 		unsigned int num = outer_it->second.size() + 1;
 		outer_it->second.insert(make_pair(value, num));
 	}
 
-	return (outer_it->second)[value];
+	unsigned int result = (outer_it->second)[value];
+	if (free)
+		outer_it->second.erase(inner_it);
+
+	return result;
+}
+
+template<typename T, typename K>
+int Preprocess<T, K>::reorder(string func, string key, int temp_value, int pos, int* result)
+{
+	if (all_data[pos-state]["func"] != func)
+		return 0;
+
+	if (pos-state < barrier)
+		return 0;
+
+	string last_value = all_data[pos-state][key];
+	int value = std::stoi(last_value);
+
+	if (value > temp_value) {	// need reorder
+		all_data[pos-state][key] = std::to_string(temp_value);
+		*result = value;
+		int rec_result;
+		int ret = reorder(func, key, temp_value, pos-state, &rec_result);
+		if (ret)
+			all_data[pos-state][key] = std::to_string(rec_result);
+		return 1;
+	}
+	else
+		return 0;
 }
 
 // analyze each line, note this funtion is data-specific
 template<typename T, typename K>
-int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
+int Preprocess<T, K>::extract_data_from_single_line(std::string & line, int pos)
 {
 	std::string key, value, temp;
 	K cur_func;
@@ -153,20 +198,56 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line)
 			auxiliary.insert(pair<std::string, std::string>(key, value));
 			continue;
 		}
-		if (key == "info" || key == "status" || key == "tag")
-			value = key;
+		if (key == "info" || key == "op" || key == "status" || key == "tag" || key == "array_of_statuses" || key == "request" || key == "array_of_requests") value = key;
 
-		// TODO: remove it later
-		if (key == "fh" || key == "request"){
-			unsigned int assigned_value = build_match(key, value);
-			value = to_string(assigned_value);
+		if (first == true && (key == "dest" || key == "source")) {
+			int temp_value = std::stoi(value);
+			temp_value -= rank;
+			if (temp_value < 0)
+				temp_value += procs;
+
+			string func_name = cur_func["func"];
+			if (boost::starts_with(func_name, "MPI_I")) {
+				int result = temp_value;
+				int ret = 0;
+				if (state)
+					ret = reorder(func_name, key, temp_value, pos, &result);
+				if (ret)
+					temp_value = result;
+			}
+
+			value = std::to_string(temp_value);
 		}
 
+		// TODO: remove it later
+		// func name should be already inserted to cur_func here?
+		else if (first == true && (key == "fh" || key == "datatype" || key == "etype" || key == "filetype" || key == "newtype" || key == "oldtype") && value.find("MPI") != 0) {
+			bool free = false;
+			if (cur_func["func"] == "MPI_File_close" || cur_func["func"] == "MPI_Type_free") 
+				free = true;
+			string temp_key = key;
+			if (temp_key == "etype" || temp_key == "filetype" || temp_key == "oldtype" || temp_key == "newtype")
+				temp_key = "datatype";
+			unsigned int assigned_value = build_match(temp_key, value, free);
+			value = std::to_string(assigned_value);
+		}
 		cur_func.insert(pair<std::string, std::string>(key, value));
 	}
 	if (auxiliary.empty())
 		return 1;
 
+	if (cur_func["func"] == "MPI_Waitall") {
+		state = 0;
+		counter = (procs-1) * 4 * 2;
+		barrier = pos;
+	}
+	else if (state == 4 || state ==0) {
+		counter--;
+		if (counter == (procs-1) * 4 * 2 - 4 + 1)
+			state = 4;
+		else if (counter == 0)
+			state = 1;
+	}
 	all_data.push_back(cur_func);
 	auxiliary_data.push_back(auxiliary);
 
@@ -205,4 +286,25 @@ int Preprocess<T, K>::data_print(ostream & out = cout)
 	return 0;
 }
 
+template<typename T, typename K>
+int Preprocess<T, K>::data_print_pure(ostream & out = cout)
+{
+	out << "Outputing all data..." << std::endl;
+	if (all_data.empty()) {
+		out << "No data so far" << std::endl;
+		return 1;
+	}
+
+	typename T::iterator titor, titor2;
+	for(titor=all_data.begin(), titor2=auxiliary_data.begin(); titor!=all_data.end(); ++titor, ++titor2) {
+		typename K::iterator kitor;
+		for (kitor=titor->begin(); kitor!=titor->end(); ++kitor){
+			out << kitor->first << "=" << kitor->second << ' ';
+		}
+
+		out << std::endl;
+	}
+
+	return 0;
+}
 #endif // _PREPROCESS_H

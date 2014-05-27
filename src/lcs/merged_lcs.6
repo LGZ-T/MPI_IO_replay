@@ -1,21 +1,4 @@
-keep 2
+keep 7
 delete 1
-insert buf=buf	comm=MPI_COMM_WORLD	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	tm1=0.000100148	tm2=0.000078221	
-keep 8
-delete 1
-insert buf=buf	comm=	count=1024	datatype=MPI_CHAR	dest=0	func=MPI_Send	tag=tag	tm1=0.000415945	tm2=0.000002682	
-keep 3
-delete 1
-insert amode=41	comm=MPI_COMM_SELF	fh=1	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000006	func=MPI_File_open	info=info	tm1=0.000257036	tm2=0.001680140	
-keep 3
-delete 2
-insert amode=2	comm=	fh=2	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000006	func=MPI_File_open	info=info	tm1=0.000022696	tm2=0.000353019	
-insert fh=2	func=MPI_File_close	tm1=0.000079155	tm2=0.000050484	
-keep 14
-delete 5
-insert amode=41	comm=MPI_COMM_SELF	fh=3	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000006	func=MPI_File_open	info=info	tm1=0.000005743	tm2=0.000225554	
-insert buf=buf	count=131072	datatype=MPI_BYTE	fh=3	func=MPI_File_read_at	offset=134086656	original_offset=0	repetition=1024	status=status	tm1=0.000000584	tm1_first=0.000253478	tm2=0.000050656	
-insert fh=3	func=MPI_File_close	tm1=0.000047287	tm2=0.000037812	
-insert amode=2	comm=	fh=3	filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000006	func=MPI_File_open	info=info	tm1=0.000001681	tm2=0.001323755	
-insert fh=3	func=MPI_File_close	tm1=0.000016485	tm2=0.000037557	
-keep 15
+insert array_of_sizes=2-480-484- array_of_starts=2-240-244- array_of_subsizes=2-120-124- func=MPI_Type_create_subarray ndims=2 newtype=2 oldtype=1 order=0 tm1=0.000002495 tm2=0.000010863 
+keep 23

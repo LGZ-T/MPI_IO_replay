@@ -1,3 +1,6 @@
+#include "ts.h"
+
+#include <time.h>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -45,7 +48,7 @@ int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b, str_hm
 			}
 			v[k+zero] = x;
 
-			cout << "diagonal k=" << k << " with depth d=" << d << " stop at (" << x << "," << y << ")" << endl;
+			//cout << "diagonal k=" << k << " with depth d=" << d << " stop at (" << x << "," << y << ")" << endl;
 
 			if (x>=N && y>=M) {
 				display_shortest_edit_script(fout, k, d, x, storage, a, b, b_aux);
@@ -62,10 +65,11 @@ int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b, str_hm
 		copy(iter_begin, iter_end, (*storage[d]).begin());
 
 		for (int i=0; i<2*d+1; i++)
-			cout << (*storage[d])[i] << " ";
+			//cout << (*storage[d])[i] << " ";
+			;
 		cout << endl; 
 
-		copy((*storage[d]).begin(), (*storage[d]).end(), ostream_iterator<int>(cout, " "));
+		//copy((*storage[d]).begin(), (*storage[d]).end(), ostream_iterator<int>(cout, " "));
 		cout << endl;
 	}
 	return -1;
@@ -75,7 +79,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 {
 	cout << endl;
 	cout << "Display here." << endl;
-	cout << "k:" << k << " d:" << d << " value:" << value << endl;
+	//cout << "k:" << k << " d:" << d << " value:" << value << endl;
 
 	if (d == 0) {
         if (value > 0)
@@ -92,7 +96,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 	// strip the snake
 	do {
 		value = x;
-		cout << "k:" << k << " d:" << d << " value:" << value << endl;
+		//cout << "k:" << k << " d:" << d << " value:" << value << endl;
 
 		int middle = d-1;
 	
@@ -121,8 +125,8 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
             break;
 		}
 		else {
-			cout << "strip snake" << endl;
-            keep++;
+			//cout << "strip snake" << endl;
+            		keep++;
 		}
 		
 	} while(a[x--] == b[y--]);
@@ -167,22 +171,22 @@ void post_process(const char* temp_filename, const char* filename)
         }
         else {
             nd++;
-            last = "delete " + to_string(nd);
+            last = "delete " + std::to_string(nd);
         }
-        cout << line << endl;
+        //cout << line << endl;
     }
     fout << last << endl;
     cout << "Closing file..." << endl;
     fout.close();
 }
 
-int lcs_merge_two(str_hmap_list& la, int i, str_hmap_list& a_aux)
+int lcs_merge_two(str_hmap_list& la, const char * prefix, int procs, int i, str_hmap_list& a_aux)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
-	string b("../input_data/wzzhang_IOR/log." + to_string(i));
-	Preprocess<str_hmap_list, str_hmap> ppb(b);
+	string b(string(prefix) + "log." + std::to_string(i));
+	Preprocess<str_hmap_list, str_hmap> ppb(b, procs, i, true);
 	ppb.run();	
-    ppb.data_print();
+    //ppb.data_print();
     str_hmap_list& lb = ppb.get_data();
     str_hmap_list& b_aux = ppb.get_auxiliary();
 
@@ -204,24 +208,37 @@ int lcs_merge_two(str_hmap_list& la, int i, str_hmap_list& a_aux)
 
 int main(int argc, char* argv[])
 {
-    	int logs = 8;
+	if (argc != 3) {
+		cout << "Incorrect input" << endl;
+		return 1;
+	}
 
-	const char * zero = "../input_data/wzzhang_IOR/log.0";
-	string base(zero);
-	Preprocess<str_hmap_list, str_hmap> ppa(base);
+	string num(argv[1]);
+    	int logs = stoi(num);
+	const char * prefix = argv[2];
+	string base(prefix);
+	base += "/log.0";
+
+	struct timespec begin = recorder_wtime();
+	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0, true);
 	ppa.run();	
-    ppa.data_print();
+    //ppa.data_print();
     str_hmap_list& la = ppa.get_data();
     str_hmap_list& a_aux = ppa.get_auxiliary();
 
 	for (int i=1; i<logs; i++) {
 		// merge log 0 and log i
-		lcs_merge_two(la, i, a_aux);
+		lcs_merge_two(la, prefix, logs, i, a_aux);
 	}
 	
 	// copy log.0
 	ofstream out0("lcs/merged_lcs.0");
 	ppa.data_print(out0);
+
+	struct timespec end = recorder_wtime();
+	struct timespec cost = end - begin;
+
+	printf("LCS merge cost %ld.%09ld second\n", cost.tv_sec, cost.tv_nsec);
 
 	return 0;
 }
