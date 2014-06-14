@@ -48,7 +48,16 @@ int SuffixTree::search(str_hmap_list& sub)
 
 int SuffixTree::construct(void)
 {
+
+	str_hmap end;
+	end.insert(make_pair("TheLastElement", "END"));
+	test_str.push_back(end);
+
 	while (pos < test_str.size()) {
+		if ((test_str[pos]).find("func") == (test_str[pos]).end()) {
+			pos++;
+			continue;
+		}
 		ls.clear();
 		remainder++;
 		cout << "Char:  "  << test_str[pos] << endl;
@@ -58,6 +67,7 @@ int SuffixTree::construct(void)
 			flag = insert();
 		pos++;
 	}
+
 	return 0;
 }
 
@@ -99,8 +109,10 @@ int SuffixTree::insert_rule1(void)
 		str_hmap match_char = (*a_edge)[get_active_length()];
 		if (match_char == get_ele(pos))
 			possible = a_edge;
-		else
+		else {
 			will_insert = true;	// will insert while active length is not 0 and activechar don't match
+			active_char = get_ele(pos-remainder+1);
+		}
 		cout << "Active char is " << match_char << endl;
 
 		// node for insertion
@@ -152,15 +164,20 @@ int SuffixTree::insert_rule1(void)
 
 SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 {
-	cout << "seperate the old edge here: " << (*a_edge) << endl;
+	cout << "seperate the old edge here: " << a_edge->begin << " " << a_edge->end << endl;
 			
 	str_hmap active_char;
 	 
 	// active char is the first char of next suffix, that is, the second char of current suffix
-	if (remainder > 2)
+/*	if (remainder > 1)
 		active_char = (*a_edge)[1];
 	else 
-		active_char = get_ele(pos);
+		active_char = get_ele(pos);*/
+
+	if (remainder > 2)
+		active_char = get_ele(pos-remainder+1);
+	else 
+		active_char = nil;
 
 	int new_begin = a_edge->begin + get_active_length();
 	int new_end = a_edge->end;
@@ -168,17 +185,17 @@ SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 	int old_begin = a_edge->begin;
 	int old_end = new_begin - 1;
 
-	cout << node->find_edge(active_char) << "|||||||||||||||||||||||||| char " << active_char << endl;
-	cout << (*node);
+	cout << node->find_edge(active_char) << "||| char " << active_char << endl;
+	//cout << (*node);
 
 	node->del_edge(a_edge);
 	a_edge->change_edge(new_begin, new_end);
 	Edge* old_edge1 = new Edge(old_begin, old_end, test_str);
 	node->add_edge(old_edge1);
-	cout << node->find_edge(active_char) << "||||||||||||||||||||||||||2 char " << active_char << endl;
+	cout << node->find_edge(active_char) << "|||2 char " << active_char << endl;
 
 	old_edge1->endpoint->add_edge(a_edge);
-	cout << (*node);
+	cout << (node);
 //	old_edge1->endpoint->suffix_link = a_edge->endpoint->suffix_link;
 //	a_edge->endpoint->suffix_link = NULL;
 /*-----------------------------------------------------------------------
@@ -188,9 +205,7 @@ SuffixTree::Node* SuffixTree::seperate_edge(Node * node, Edge* a_edge, int rule)
 
 	cout << "change edge" << endl;
 
-	cout << "What's wrong?" << endl;
-	cout << "The old edge split as -- " << (*a_edge) << " and -- " << (*old_edge1) << endl;
-	cout << "What's wrong?" << endl;
+	cout << "The old edge split as -- " << a_edge->begin << ", " << a_edge->end << " and -- " << old_edge1->begin << ", " << old_edge1->end << endl;
 			
 	if (rule == 1) {
 		set_active_edge(active_char);
@@ -253,13 +268,22 @@ int SuffixTree::insert_rule3()
 	if (edge != NULL) {
 		node = seperate_edge(node, edge, 3);
 	}
+	else {
+		Node * n = node->suffix_link;
+		
+		if (n)
+			set_active_node(n);
+		else
+			set_active_node(&root);
+	}
 
 	using std::numeric_limits;
 
 	cout << "append a new edge at endpoint" << endl;
 	Edge* new_edge2 = new Edge(pos, numeric_limits<int>::max(), test_str);
-	cout << node << endl;
+	//cout << node << endl;
 	node->add_edge(new_edge2);
+	
 
 	remainder--;
 
@@ -293,8 +317,8 @@ int SuffixTree::print_node(Node* node, int level)
 	
 		int begin = iter->first->begin, end = (iter->first->end < test_str.size() - 1) ? iter->first->end : test_str.size() - 1;
 		cout << "--> (" << begin << ", " << end << ")  ";
-		for (int i=begin; i<=end; i++)
-			cout << test_str[i];
+		//for (int i=begin; i<=end; i++)
+		//	cout << test_str[i];
 		if (end != iter->first->end)
 			cout << '#';
 		cout << endl;

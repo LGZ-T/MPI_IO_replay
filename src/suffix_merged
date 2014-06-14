@@ -1,0 +1,14 @@
+insert func= 
+keep -8756 -8756
+insert buf=buf comm=MPI_COMM_WORLD count=1024 datatype=MPI_CHAR dest=242 func=MPI_Send tag=tag 
+keep -8500 -8493
+insert buf=buf comm= count=1024 datatype=MPI_CHAR dest=242 func=MPI_Send tag=tag 
+keep -8237 -8235
+insert amode=41 comm=MPI_COMM_SELF fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000014 func=MPI_File_open info=info 
+keep -8233 -4136
+insert amode=2 comm= fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000014 func=MPI_File_open info=info 
+keep 4624 4639
+insert amode=41 comm=MPI_COMM_SELF fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000026 func=MPI_File_open info=info 
+keep -4117 -21
+insert amode=2 comm= fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000026 func=MPI_File_open info=info 
+keep -19 -2

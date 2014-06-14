@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include "datatype.h"
 
@@ -18,6 +19,7 @@ using std::cout;
 using std::endl;
 using std::out_of_range;
 using std::ostream;
+using std::stringstream;
 //typedef tr1::unordered_map map;
 
 // TODO: upgrade it to process trace. Rule: char-->elem  string-->elem_list
@@ -41,7 +43,7 @@ public:
 
 	// return the length of the longest prefix of sub which can be matched in suffix tree
 	template <class Iterator>
-	Iterator inc_search(Iterator sub)
+	Iterator inc_search(Iterator sub, int *final_pos)
 	{
 		typedef typename Iterator::value_type T;	// extract real type
 
@@ -51,6 +53,7 @@ public:
 		int pos = 0;	// the iter's pos at edge
 		int edge_len = -1;
 		bool flag = true;
+		*final_pos = -1;
 
 
 		while (flag) {
@@ -68,16 +71,25 @@ public:
 			else {
 				if (pos >= edge_len) {
 					node = edge->endpoint;
+					*final_pos = edge->end;
 					edge = NULL;
 					edge_len = 0;
+					pos = 0;
+
+					if (node == NULL || node->isleaf()) {
+						flag = false;
+					}
+
 				}
 				else {
 					if (*result == (*edge)[pos]) {
 						result++;
 						pos++;
 					}
-					else
+					else {
 						flag = false;
+						*final_pos = edge->end - edge->length() + pos;
+					}
 				}
 			}
 		}
@@ -105,7 +117,7 @@ private:
 		Edge(int b, int e, str_hmap_list& str):
 			test_node_str(str), begin(b), end(e), endpoint(NULL)
 		{
-			std::cout << "Edge initialized" << std::endl;
+		//	std::cout << "Edge initialized" << std::endl;
 		}
 		
 
@@ -133,8 +145,16 @@ private:
 		str_hmap operator[](int i)
 		{
 			i += begin;
-			if (i > end)
-				throw out_of_range("Edge [] out of range.");
+
+			if (i > end) {
+				stringstream ss;
+				cout << "Edge begin at " << begin << "and end at " << end << " Invalid " << i << " position" << endl;
+				ss << "Edge begin at " << begin << "and end at " << end << " Invalid " << i << " position";
+				string output;
+				ss >> output;
+				cout << output << endl;
+				throw out_of_range(output);
+			}
 
 			return test_node_str[i];
 		}
@@ -171,7 +191,7 @@ private:
 		friend class LinkState;
 
 		Node(str_hmap_list& str) : 
-			test_node_str(str), suffix_link(NULL) { edges.clear(); findedges.clear(); std::cout << "Node initialized" << std::endl; }
+			test_node_str(str), suffix_link(NULL) { edges.clear(); findedges.clear(); }
 
 		int add_edge(Edge* edge) { 
 			if (edge->endpoint == NULL)
@@ -179,7 +199,6 @@ private:
 			make_pair(edge, true);
 			edges.insert(make_pair(edge, true)); 
 			findedges.insert(make_pair(test_node_str[edge->begin], edge));
-			cout << "edge added. Now we have " << edges.size() << "edges." << endl;
 		}
 
 		int del_edge(Edge* edge) {
@@ -190,9 +209,7 @@ private:
 			else {
 				// note we should erase the findedges too
 				edges.erase(edge);
-				cout << "delete" << (*edge)[0] << endl;
 				findedges.erase((*edge)[0]);
-				cout << "edge deleted. Now we have " << edges.size() << "edges." << endl;
 			}
 
 		}
@@ -200,9 +217,7 @@ private:
 		// find edge by the first char
 		Edge* find_edge(str_hmap c)
 		{
-			cout << "finding edge";
 			map<str_hmap, Edge*>::iterator iter = findedges.find(c);
-			cout << "founded?" << endl;
 			if (iter != findedges.end()) 
 				return iter->second;
 			else
@@ -251,7 +266,7 @@ private:
 	ActivePoint active_point;
 
 	Node* get_active_node(void) { return active_point.active_node; }
-	void set_active_node(Node* node) { active_point.active_node = node; cout << "Active node set as " << node << endl; }
+	void set_active_node(Node* node) { active_point.active_node = node; }
 	str_hmap get_active_edge(void) { return active_point.active_edge; }
 	void set_active_edge(str_hmap edge) { active_point.active_edge = edge; }
 	int get_active_length(void) { return active_point.active_length; }
@@ -310,7 +325,6 @@ private:
 			
 			if (!first) {
 				prev->suffix_link = curr;
-				cout << "Suffix link added from prev " << prev << " to curr " << curr << endl;
 			}
 
 			first = false;

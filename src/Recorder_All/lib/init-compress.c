@@ -38,6 +38,12 @@ extern SimpleCompress *sc;
         fprintf(stderr, "Darshan failed to map symbol: %s\n", #func); \
     }
 
+RECORDER_FORWARD_DECL(PMPI_Comm_free, int, (MPI_Comm *comm));
+RECORDER_TYPE(PMPI_Comm_free, int, (MPI_Comm *comm));
+RECORDER_FORWARD_DECL(PMPI_Comm_dup, int, (MPI_Comm comm, MPI_Comm *newcomm));
+RECORDER_TYPE(PMPI_Comm_dup, int, (MPI_Comm comm, MPI_Comm *newcomm));
+RECORDER_FORWARD_DECL(PMPI_Comm_split, int, (MPI_Comm comm, int color, int key, MPI_Comm *newcomm));
+RECORDER_TYPE(PMPI_Comm_split, int, (MPI_Comm comm, int color, int key, MPI_Comm *newcomm));
 RECORDER_FORWARD_DECL(PMPI_Ibsend, int, (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request));
 RECORDER_TYPE(PMPI_Ibsend, int, (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request));
 RECORDER_FORWARD_DECL(PMPI_Irsend, int, (void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request));
@@ -102,8 +108,6 @@ RECORDER_FORWARD_DECL(PMPI_Waitall, int, (int count, MPI_Request *array_of_reque
 RECORDER_TYPE(PMPI_Waitall, int, (int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses));
 RECORDER_FORWARD_DECL(PMPI_Waitany, int, (int count, MPI_Request *array_of_requests, int *index, MPI_Status *status));
 RECORDER_TYPE(PMPI_Waitany, int, (int count, MPI_Request *array_of_requests, int *index, MPI_Status *status));
-RECORDER_FORWARD_DECL(PMPI_Waitsome, int, (int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses));
-RECORDER_TYPE(PMPI_Waitsome, int, (int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses));
 RECORDER_FORWARD_DECL(PMPI_Bcast, int, (void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm));
 RECORDER_TYPE(PMPI_Bcast, int, (void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm));
 RECORDER_FORWARD_DECL(PMPI_Reduce, int, (void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm));
@@ -202,6 +206,8 @@ RECORDER_FORWARD_DECL(PMPI_Type_create_resized, int, (MPI_Datatype oldtype, MPI_
 RECORDER_TYPE(PMPI_Type_create_resized, int, (MPI_Datatype oldtype, MPI_Aint lb, MPI_Aint extent, MPI_Datatype *newtype));
 RECORDER_FORWARD_DECL(PMPI_Type_create_struct, int, (int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[], MPI_Datatype array_of_types[], MPI_Datatype *newtype));
 RECORDER_TYPE(PMPI_Type_create_struct, int, (int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[], MPI_Datatype array_of_types[], MPI_Datatype *newtype));
+RECORDER_FORWARD_DECL(PMPI_Type_struct, int, (int count, int *array_of_blocklengths, MPI_Aint *array_of_displacements, MPI_Datatype *array_of_types, MPI_Datatype *newtype));
+RECORDER_TYPE(PMPI_Type_struct, int, (int count, int *array_of_blocklengths, MPI_Aint *array_of_displacements, MPI_Datatype *array_of_types, MPI_Datatype *newtype));
 RECORDER_FORWARD_DECL(PMPI_Type_create_subarray, int, (int ndims, int array_of_sizes[], int array_of_subsizes[], int array_of_starts[], int order, MPI_Datatype oldtype, MPI_Datatype *newtype));
 RECORDER_TYPE(PMPI_Type_create_subarray, int, (int ndims, int array_of_sizes[], int array_of_subsizes[], int array_of_starts[], int order, MPI_Datatype oldtype, MPI_Datatype *newtype));
 RECORDER_FORWARD_DECL(PMPI_Type_dup, int, (MPI_Datatype type, MPI_Datatype *newtype));
@@ -231,7 +237,10 @@ RECORDER_TYPE(PMPI_Op_free, int, (MPI_Op *op));
 
 
 int resolve_mpi_symbols()
-{	MAP_OR_FAIL(PMPI_Ibsend);
+{	MAP_OR_FAIL(PMPI_Comm_free);
+	MAP_OR_FAIL(PMPI_Comm_dup);
+	MAP_OR_FAIL(PMPI_Comm_split);
+	MAP_OR_FAIL(PMPI_Ibsend);
 	MAP_OR_FAIL(PMPI_Irsend);
 	MAP_OR_FAIL(PMPI_Issend);
 	MAP_OR_FAIL(PMPI_Isend);
@@ -263,7 +272,6 @@ int resolve_mpi_symbols()
 	MAP_OR_FAIL(PMPI_Wait);
 	MAP_OR_FAIL(PMPI_Waitall);
 	MAP_OR_FAIL(PMPI_Waitany);
-	MAP_OR_FAIL(PMPI_Waitsome);
 	MAP_OR_FAIL(PMPI_Bcast);
 	MAP_OR_FAIL(PMPI_Reduce);
 	MAP_OR_FAIL(PMPI_File_close);
@@ -313,6 +321,7 @@ int resolve_mpi_symbols()
 	MAP_OR_FAIL(PMPI_Type_create_indexed_block);
 	MAP_OR_FAIL(PMPI_Type_create_resized);
 	MAP_OR_FAIL(PMPI_Type_create_struct);
+	MAP_OR_FAIL(PMPI_Type_struct);
 	MAP_OR_FAIL(PMPI_Type_create_subarray);
 	MAP_OR_FAIL(PMPI_Type_dup);
 	MAP_OR_FAIL(PMPI_Type_free);

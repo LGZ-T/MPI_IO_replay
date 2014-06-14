@@ -3,12 +3,15 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <tr1/unordered_map>
 #include <map>
 #include <list>
 #include <vector>
+#include <cstdlib>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 #include "datatype.h"
 
 using namespace std;
@@ -32,6 +35,7 @@ private:
 
 	unsigned int build_match(string& key, string& value, bool first);
 	int reorder(string func, string key, int temp_value, int pos, int* result);
+	bool check_io(string& func_name, string& offset);
 
 	bool first; // this state should be true if and only if it is reading the raw logs!
 	int procs;
@@ -39,6 +43,10 @@ private:
 	int state;	// reorder arg, ugly..
 	int counter;
 	int barrier;
+
+	string last_io;
+	unsigned long last_offset;
+	unsigned long offset_dis;
 
 	// return 0 if repetition found, 
 	// -1 if function name unmatch,
@@ -75,8 +83,13 @@ Preprocess<T, K>::Preprocess(string filename_para, int procs_para, int rank_para
 	counter = 0;
 	barrier = 0;
 	argument_maps.clear();
+	last_io = "INI";
+	last_offset = 0;
+	offset_dis = 0;
 	argument_maps.insert(make_pair("fh", map<string, unsigned int>()));
 	argument_maps.insert(make_pair("datatype", map<string, unsigned int>()));
+	argument_maps.insert(make_pair("request", map<string, unsigned int>()));
+	argument_maps.insert(make_pair("comm", map<string, unsigned int>()));
 	std::cout << "File " << filename << std::endl;
 }
 
@@ -102,11 +115,12 @@ int Preprocess<T, K>::run()
 	K empty;
 	all_data.push_back(empty);
 	auxiliary_data.push_back(empty);
+	//auxiliary_data.push_back(empty);
 	
 	while (getline(fin,ReadLine))
 	{
 		lineno++;
-		//std::cout << lineno << '\t' << ReadLine << std::endl;
+//		std::cout << lineno << '\t' << ReadLine << std::endl;
 		Preprocess::extract_data_from_single_line(ReadLine, lineno);
 //		if (lineno > 100)
 //			break;
@@ -124,6 +138,18 @@ unsigned int Preprocess<T, K>::build_match(string& key, string& value, bool free
 	
 	typename map<string, unsigned int>::iterator inner_it;
 	if ((inner_it = (outer_it->second).find(value)) == (outer_it->second).end()) {
+		if (free == true) {
+			cout << "Freeing unallocated handle!" << endl;
+			cout << "Current parameter: " << key << endl;
+			cout << "Current Handle: " << value << endl;
+			cout << "Handle(argument) Map:" << endl;
+
+			for (inner_it = outer_it->second.begin(); inner_it!=outer_it->second.end(); ++inner_it)
+				cout << inner_it->first << "->" << inner_it->second << "\t";
+
+			cout << endl;
+			exit(1);
+		}
 		unsigned int num = outer_it->second.size() + 1;
 		outer_it->second.insert(make_pair(value, num));
 	}
@@ -138,6 +164,7 @@ unsigned int Preprocess<T, K>::build_match(string& key, string& value, bool free
 template<typename T, typename K>
 int Preprocess<T, K>::reorder(string func, string key, int temp_value, int pos, int* result)
 {
+	/*
 	if (all_data[pos-state]["func"] != func)
 		return 0;
 
@@ -156,8 +183,28 @@ int Preprocess<T, K>::reorder(string func, string key, int temp_value, int pos, 
 			all_data[pos-state][key] = std::to_string(rec_result);
 		return 1;
 	}
-	else
+	else*/
 		return 0;
+}
+
+template<typename T, typename K>
+bool Preprocess<T, K>::check_io(string& func_name, string& offset) 
+{
+	unsigned long off = stoul(offset);
+	if (last_io != func_name || off == 0) {
+		last_io = func_name;
+		offset_dis = off - last_offset;
+		last_offset = off;
+		return false;
+	}
+	if (off - last_offset != offset_dis) {
+		offset_dis = off - last_offset;
+		last_offset = off;
+		return false;
+	}
+	last_offset = off;
+	return true;
+
 }
 
 // analyze each line, note this funtion is data-specific
@@ -179,13 +226,11 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line, int pos)
 		
 		cur_para_begin = cur_para_end+1,cur_para_end = line.find(' ', cur_para_begin)){
 		
-		// TODO: boost string have built-in trim whitespace, while c++ std don't
-		// trim whitspace
 		while (line[cur_para_begin] == ' ')
 			cur_para_begin++;
 		temp.assign(line, cur_para_begin, cur_para_end-cur_para_begin);
 		size_t split_pos = temp.find('=');
-		// TODO: spilt_pos is unsigned int, always positive
+
 		if (split_pos >= 0) {
 			value.assign(temp, split_pos+1, std::string::npos);
 			key.assign(temp, 0, split_pos);
@@ -198,14 +243,45 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line, int pos)
 			auxiliary.insert(pair<std::string, std::string>(key, value));
 			continue;
 		}
-		if (key == "info" || key == "op" || key == "status" || key == "tag" || key == "array_of_statuses" || key == "request" || key == "array_of_requests") value = key;
+		else if (key == "info" || key == "op" || key == "status" || key == "array_of_statuses") 
+			value = key;
+		else if (key == "tag" || key == "sendtag" || key == "recvtag")
+			value = "MPI_ANY_TAG";
+
+		else if ((key == "array_of_types" || key == "array_of_requests") && first == true) {
+			vector<string> substrs;
+			boost::split(substrs, value, boost::is_any_of("-"));
+
+			std::stringstream ss;
+			string new_value;
+
+			int size = stoi(substrs[0]);
+			ss << substrs[0] << "-";
+			string temp_key;
+			bool free = false;
+
+			if (key == "array_of_types")
+				temp_key = "datatype";
+			else {	// MPI_Waitall
+				temp_key = "request";
+				free = true;
+			}
+			string temp_value;
+			for (int i=1; i<=size; i++) {
+				temp_value = substrs[i];
+				unsigned int v = build_match(temp_key, temp_value, free);
+				ss << v << "-";
+			}		
+			ss >> new_value;
+			value = new_value;
+		}
 
 		if (first == true && (key == "dest" || key == "source")) {
 			int temp_value = std::stoi(value);
 			temp_value -= rank;
-			if (temp_value < 0)
-				temp_value += procs;
-
+			//if (temp_value < 0)
+			//	temp_value += procs;
+/*
 			string func_name = cur_func["func"];
 			if (boost::starts_with(func_name, "MPI_I")) {
 				int result = temp_value;
@@ -215,28 +291,44 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line, int pos)
 				if (ret)
 					temp_value = result;
 			}
-
+*/
 			value = std::to_string(temp_value);
 		}
 
 		// TODO: remove it later
 		// func name should be already inserted to cur_func here?
-		else if (first == true && (key == "fh" || key == "datatype" || key == "etype" || key == "filetype" || key == "newtype" || key == "oldtype") && value.find("MPI") != 0) {
+		else if (first == true && (key == "comm" || key == "newcomm" || key == "fh" || key == "request" || key == "datatype" || key == "etype" || key == "filetype" || key == "newtype" || key == "oldtype") && value.find("MPI") != 0) {
 			bool free = false;
-			if (cur_func["func"] == "MPI_File_close" || cur_func["func"] == "MPI_Type_free") 
+			if (cur_func["func"] == "MPI_File_close" || cur_func["func"] == "MPI_Type_free" || cur_func["func"] == "MPI_Wait") 
 				free = true;
 			string temp_key = key;
 			if (temp_key == "etype" || temp_key == "filetype" || temp_key == "oldtype" || temp_key == "newtype")
 				temp_key = "datatype";
+			else if (temp_key == "newcomm")
+				temp_key = "comm";
 			unsigned int assigned_value = build_match(temp_key, value, free);
 			value = std::to_string(assigned_value);
 		}
+		else if (first == true && (key == "offset") && (cur_func["func"].find("read_at") != string::npos || cur_func["func"].find("write_at"))) {
+			bool flag = false;
+			flag = true;
+			
+			flag = check_io(cur_func["func"], value);
+			
+			//cout << last_io <<  " " << last_offset << " " <<  offset_dis << endl;
+			if (flag)
+				value = to_string(0);
+			else
+				cur_func.insert(make_pair("MARK", "startingpoint"));
+		}
 		cur_func.insert(pair<std::string, std::string>(key, value));
 	}
+
+	// TODO: sample
 	if (auxiliary.empty())
 		return 1;
 
-	if (cur_func["func"] == "MPI_Waitall") {
+	if (first == true && cur_func["func"] == "MPI_Waitall") {
 		state = 0;
 		counter = (procs-1) * 4 * 2;
 		barrier = pos;
@@ -248,6 +340,15 @@ int Preprocess<T, K>::extract_data_from_single_line(std::string & line, int pos)
 		else if (counter == 0)
 			state = 1;
 	}
+	if (auxiliary.find("tm1") == auxiliary.end())
+		return 1;
+	if (cur_func.find("func") == cur_func.end())
+		return 1;
+	if (auxiliary["tm1"] == "")
+		return 1;
+	if (cur_func["func"] == "")
+		return 1;
+
 	all_data.push_back(cur_func);
 	auxiliary_data.push_back(auxiliary);
 

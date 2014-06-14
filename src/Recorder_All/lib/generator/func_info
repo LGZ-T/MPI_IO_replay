@@ -1,3 +1,6 @@
+MPI_Comm_free comm 
+MPI_Comm_dup comm newcomm 
+MPI_Comm_split comm color key newcomm 
 MPI_Ibsend buf count datatype dest tag comm request 
 MPI_Irsend buf count datatype dest tag comm request 
 MPI_Issend buf count datatype dest tag comm request 
@@ -30,7 +33,6 @@ MPI_Scatterv sendbuf sendcounts displs sendtype recvbuf recvcount recvtype root 
 MPI_Wait request status 
 MPI_Waitall count array_of_requests array_of_statuses 
 MPI_Waitany count array_of_requests index status 
-MPI_Waitsome incount array_of_requests outcount array_of_indices array_of_statuses 
 MPI_Bcast buffer count datatype root comm 
 MPI_Reduce sendbuf recvbuf count datatype op root comm 
 MPI_File_close fh 
@@ -80,6 +82,7 @@ MPI_Type_create_hvector count blocklength stride oldtype newtype
 MPI_Type_create_indexed_block count blocklength array_of_displacements oldtype newtype 
 MPI_Type_create_resized oldtype lb extent newtype 
 MPI_Type_create_struct count array_of_blocklengths array_of_displacements array_of_types newtype 
+MPI_Type_struct count array_of_blocklengths array_of_displacements array_of_types newtype 
 MPI_Type_create_subarray ndims array_of_sizes array_of_subsizes array_of_starts order oldtype newtype 
 MPI_Type_dup type newtype 
 MPI_Type_free datatype 

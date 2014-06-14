@@ -148,7 +148,7 @@ void recorder_shutdown(int timing_flag)
 	double ratio = (double)nano / 1000000000;
 
 	fprintf(__auxiliaryfh, "Ratio=%lf\n", ratio);
-	fprintf(__auxiliaryfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all);
+	fprintf(__auxiliaryfh, "Compute_time=%ld.%.9ld MPI_Call_time=%ld.%.9ld Recorder_time=%ld.%.9ld Read_time=%ld.%.9ld Write_time=%ld.%.9ld\n", compute_time_all, mpi_time_all, recorder_time_all, read_time_all, write_time_all);
 	fprintf(__auxiliaryfh, "All_time=%ld.%09ld", all.tv_sec, all.tv_nsec);
 	fclose(__auxiliaryfh);
 

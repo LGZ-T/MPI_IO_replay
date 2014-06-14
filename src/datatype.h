@@ -12,7 +12,7 @@ using namespace std;
 //typedef tr1::unordered_map<string, string> str_hmap; // K
 typedef map<string, string> str_hmap;	// K
 
-//TODO: ATTENTION!!!   str_hmap_list is actually a vector! This is to support the [] operation. Should change the name later
+//TODO: ATTENTION!!!   str_hmap_list is actually a vector! That's to support the [] operation. Should change the name later
 typedef vector<str_hmap> str_hmap_list; // T
 
 int data_print(str_hmap_list *all_data, ostream & out = cout);

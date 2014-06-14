@@ -1,3 +1,6 @@
+int MPI_Comm_free(MPI_Comm *comm);
+int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm);
+int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newcomm);
 int MPI_Ibsend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 int MPI_Irsend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 int MPI_Issend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
@@ -30,7 +33,6 @@ int MPI_Scatterv(void *sendbuf, int *sendcounts, int *displs, MPI_Datatype sendt
 int MPI_Wait(MPI_Request *request, MPI_Status *status);
 int MPI_Waitall(int count, MPI_Request *array_of_requests, MPI_Status *array_of_statuses);
 int MPI_Waitany(int count, MPI_Request *array_of_requests, int *index, MPI_Status *status);
-int MPI_Waitsome(int incount, MPI_Request *array_of_requests, int *outcount, int *array_of_indices, MPI_Status *array_of_statuses);
 int MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm);
 int MPI_Reduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm);
 int MPI_File_close(MPI_File *fh);
@@ -80,6 +82,7 @@ int MPI_Type_create_hvector(int count, int blocklength, MPI_Aint stride, MPI_Dat
 int MPI_Type_create_indexed_block(int count, int blocklength, int array_of_displacements[], MPI_Datatype oldtype, MPI_Datatype *newtype);
 int MPI_Type_create_resized(MPI_Datatype oldtype, MPI_Aint lb, MPI_Aint extent, MPI_Datatype *newtype);
 int MPI_Type_create_struct(int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[], MPI_Datatype array_of_types[], MPI_Datatype *newtype);
+int MPI_Type_struct(int count, int *array_of_blocklengths, MPI_Aint *array_of_displacements, MPI_Datatype *array_of_types, MPI_Datatype *newtype);
 int MPI_Type_create_subarray(int ndims, int array_of_sizes[], int array_of_subsizes[], int array_of_starts[], int order, MPI_Datatype oldtype, MPI_Datatype *newtype);
 int MPI_Type_dup(MPI_Datatype type, MPI_Datatype *newtype);
 int MPI_Type_free(MPI_Datatype *datatype);

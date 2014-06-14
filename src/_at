@@ -1,0 +1,100 @@
+tm1=0.000535875 tm2=0.000002958 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=3000 comm= request=134341888 
+tm1=0.000000923 tm2=0.000000754 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134343424 
+tm1=0.000000189 tm2=0.000000551 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=5000 comm= request=134616704 
+tm1=0.000000074 tm2=0.000000698 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=4000 comm= request=134342656 
+tm1=0.000000078 tm2=0.000000502 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=6000 comm= request=134617472 
+tm1=0.000000077 tm2=0.000000430 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=7000 comm= request=134344192 
+tm1=0.000000603 tm2=0.000004030 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2000 comm= request=134338304 
+tm1=0.000000155 tm2=0.000001443 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134666752 
+tm1=0.000000110 tm2=0.000001600 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4000 comm= request=134667520 
+tm1=0.000000098 tm2=0.000001692 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134339840 
+tm1=0.000000191 tm2=0.000002258 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=7000 comm= request=134340608 
+tm1=0.000000093 tm2=0.000001757 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=6000 comm= request=134339072 
+tm1=0.000002421 tm2=0.000862524 func=MPI_Waitall count=12 array_of_requests=12-134341888-134343424-134616704-134342656-134617472-134344192-134338304-134666752-134667520-134339840-134340608-134339072- array_of_statuses=12884901888001 
+tm1=0.096990494 tm2=0.000007258 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134339072 
+tm1=0.000001062 tm2=0.000001768 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=1 tag=3003 comm= request=134344192 
+tm1=0.000000698 tm2=0.007892056 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000934 tm2=0.000000304 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.049197650 tm2=0.000006971 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2003 comm= request=134339072 
+tm1=0.000001262 tm2=0.000002184 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134344192 
+tm1=0.000000791 tm2=0.004858568 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000001800 tm2=0.000000530 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.063075061 tm2=0.000006128 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134339072 
+tm1=0.000000729 tm2=0.000000881 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=2 tag=5003 comm= request=134344192 
+tm1=0.000000397 tm2=0.000313454 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000511 tm2=0.000000524 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.057984557 tm2=0.000006943 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4003 comm= request=134339072 
+tm1=0.000001143 tm2=0.000002250 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=2 tag=4000 comm= request=134344192 
+tm1=0.000000722 tm2=0.000356985 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000378 tm2=0.000000363 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.052837589 tm2=0.000007975 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=3 tag=6000 comm= request=134339072 
+tm1=0.000001317 tm2=0.000002183 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=3 tag=6003 comm= request=134344192 
+tm1=0.000000778 tm2=0.030218950 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000850 tm2=0.000000286 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.053131572 tm2=0.000006815 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=3 tag=7003 comm= request=134339072 
+tm1=0.000001017 tm2=0.000002189 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=3 tag=7000 comm= request=134344192 
+tm1=0.000000914 tm2=0.001752221 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000484 tm2=0.000000191 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.010442111 tm2=0.000003227 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=3000 comm= request=134344192 
+tm1=0.000000789 tm2=0.000000547 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134617472 
+tm1=0.000000173 tm2=0.000000675 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=5000 comm= request=134342656 
+tm1=0.000000069 tm2=0.000000439 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=4000 comm= request=134616704 
+tm1=0.000000092 tm2=0.000000746 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=6000 comm= request=134343424 
+tm1=0.000000075 tm2=0.000000640 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=7000 comm= request=134341888 
+tm1=0.000000592 tm2=0.000007397 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2000 comm= request=134339072 
+tm1=0.000000109 tm2=0.000001540 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134340608 
+tm1=0.000000090 tm2=0.000002514 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4000 comm= request=134339840 
+tm1=0.000000090 tm2=0.000001657 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134667520 
+tm1=0.000000183 tm2=0.000002175 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=7000 comm= request=134666752 
+tm1=0.000000085 tm2=0.000001786 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=6000 comm= request=134338304 
+tm1=0.000005521 tm2=0.012416335 func=MPI_Waitall count=12 array_of_requests=12-134344192-134617472-134342656-134616704-134343424-134341888-134339072-134340608-134339840-134667520-134666752-134338304- array_of_statuses=12884901888001 
+tm1=0.095033111 tm2=0.000007133 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134338304 
+tm1=0.000001022 tm2=0.000001712 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=1 tag=3003 comm= request=134341888 
+tm1=0.000000839 tm2=0.006752255 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000000501 tm2=0.000000277 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.049378044 tm2=0.000007109 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2003 comm= request=134338304 
+tm1=0.000001128 tm2=0.000001733 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134341888 
+tm1=0.000000656 tm2=0.004652286 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000000759 tm2=0.000000461 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.062989774 tm2=0.000005746 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134338304 
+tm1=0.000000782 tm2=0.000000889 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=2 tag=5003 comm= request=134341888 
+tm1=0.000000388 tm2=0.000302225 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000000500 tm2=0.000000553 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.058200275 tm2=0.000008084 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4003 comm= request=134338304 
+tm1=0.000001394 tm2=0.000002245 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=2 tag=4000 comm= request=134341888 
+tm1=0.000000731 tm2=0.000331072 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000000468 tm2=0.000000525 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.052701880 tm2=0.000007048 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=3 tag=6000 comm= request=134338304 
+tm1=0.000001214 tm2=0.000002206 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=3 tag=6003 comm= request=134341888 
+tm1=0.000000813 tm2=0.030394298 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000001468 tm2=0.000000374 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.053242355 tm2=0.000008350 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=3 tag=7003 comm= request=134338304 
+tm1=0.000001177 tm2=0.000002412 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=3 tag=7000 comm= request=134341888 
+tm1=0.000000837 tm2=0.001477096 func=MPI_Wait request=134338304 status=140735972165856 
+tm1=0.000000474 tm2=0.000000180 func=MPI_Wait request=134341888 status=140735972165856 
+tm1=0.010272727 tm2=0.000002426 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=3000 comm= request=134341888 
+tm1=0.000000797 tm2=0.000000675 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134343424 
+tm1=0.000000171 tm2=0.000000552 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=5000 comm= request=134616704 
+tm1=0.000000072 tm2=0.000000633 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=2 tag=4000 comm= request=134342656 
+tm1=0.000000069 tm2=0.000000500 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=6000 comm= request=134617472 
+tm1=0.000000094 tm2=0.000000420 func=MPI_Irecv buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION source=3 tag=7000 comm= request=134344192 
+tm1=0.000000472 tm2=0.000006906 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2000 comm= request=134338304 
+tm1=0.000000100 tm2=0.000001463 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134666752 
+tm1=0.000000085 tm2=0.000002452 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4000 comm= request=134667520 
+tm1=0.000000096 tm2=0.000001631 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134339840 
+tm1=0.000000194 tm2=0.000002433 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=7000 comm= request=134340608 
+tm1=0.000000086 tm2=0.000001486 func=MPI_Isend buf=buf count=26010 datatype=MPI_DOUBLE_PRECISION dest=3 tag=6000 comm= request=134339072 
+tm1=0.000005874 tm2=0.012842884 func=MPI_Waitall count=12 array_of_requests=12-134341888-134343424-134616704-134342656-134617472-134344192-134338304-134666752-134667520-134339840-134340608-134339072- array_of_statuses=12884901888001 
+tm1=0.095268843 tm2=0.000006948 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=1 tag=3000 comm= request=134339072 
+tm1=0.000001080 tm2=0.000001735 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=1 tag=3003 comm= request=134344192 
+tm1=0.000000838 tm2=0.006882544 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000498 tm2=0.000000319 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.049254479 tm2=0.000005995 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=1 tag=2003 comm= request=134339072 
+tm1=0.000001063 tm2=0.000001734 func=MPI_Irecv buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION source=1 tag=2000 comm= request=134344192 
+tm1=0.000000581 tm2=0.004630094 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000857 tm2=0.000000636 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.063575768 tm2=0.000005978 func=MPI_Isend buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION dest=2 tag=5000 comm= request=134339072 
+tm1=0.000000748 tm2=0.000000896 func=MPI_Irecv buf=buf count=81120 datatype=MPI_DOUBLE_PRECISION source=2 tag=5003 comm= request=134344192 
+tm1=0.000000366 tm2=0.000381844 func=MPI_Wait request=134339072 status=140735972165856 
+tm1=0.000000914 tm2=0.000000688 func=MPI_Wait request=134344192 status=140735972165856 
+tm1=0.059292015 tm2=0.000005837 func=MPI_Isend buf=buf count=13520 datatype=MPI_DOUBLE_PRECISION dest=2 tag=4003 comm= request=134339072 

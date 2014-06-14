@@ -1,4 +1,4 @@
-CXXFLAGS = -g -std=c++0x -O2
+CXXFLAGS = -std=c++0x -O2
 CXX = g++
 
 all: lcs_trace replay
@@ -19,7 +19,7 @@ replay.o: replay.cpp
 	$(CXX) $(CXXFLAGS) $^ -c
 
 lcs_trace.o: lcs_trace.cpp
-	$(CXX) $(CXXFLAGS) lcs_trace.cpp -c
+	$(CXX) $(CXXFLAGS) $^ -c
 
 clean:
 	rm datatype.o lcs_merge_trace.o replay.o lcs_trace replay

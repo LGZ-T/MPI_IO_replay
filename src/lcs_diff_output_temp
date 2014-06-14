@@ -1,6 +1,11 @@
-keep 15
+keep 1
+delete 1
+insert actual_len=1- basic_len=1- comm=MPI_COMM_WORLD func=MPI_Comm_rank in_loop_time=0.000003025- rank=rank repetition=2- tm1=0.000001299 tm2=0.000000208 
+keep 4
+delete 1
+insert array_of_sizes=2-4096-4096- array_of_starts=2-3840-3840- array_of_subsizes=2-256-256- func=MPI_Type_create_subarray ndims=2 newtype=2 oldtype=1 order=0 tm1=0.000002516 tm2=0.000012128 
+keep 8
 delete 1
 delete 1
-insert array_of_sizes=3-102-106-110- array_of_starts=3-51-55-59- array_of_subsizes=3-51-55-59- func=MPI_Type_create_subarray ndims=3 newtype=5 oldtype=1 order=1 tm1=0.000000218 tm2=0.000005266 
-insert array_of_sizes=3-102-106-110- array_of_starts=3-0-4-8- array_of_subsizes=3-51-55-59- func=MPI_Type_create_subarray ndims=3 newtype=6 oldtype=1 order=1 tm1=0.000000193 tm2=0.000004431 
-keep 7583
+insert actual_len=2- basic_len=5- comm=1 func=MPI_Comm_size in_loop_time=0.000000230- repetition=3- size=size tm1=0.000000656 tm2=0.000000296 
+insert actual_len=1- basic_len=1- comm=1 count=1 datatype=MPI_DOUBLE func=MPI_Allreduce in_loop_time=0.000000163- op=op recvbuf=recvbuf repetition=4- sendbuf=sendbuf tm1=0.000010544 tm2=0.041670751 

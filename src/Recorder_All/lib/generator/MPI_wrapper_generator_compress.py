@@ -6,26 +6,31 @@ import re
 OUTPUTFILE = 'sample_file'
 
 def generate_head(code_file, out_file):
-	data = '/* \n *This file is generated automaticaly by a wrapper generator,\n'
-	data += ' * do not edit it manually.\n'
+	data = '/* \n * This file is generated automaticaly by a wrapper generator,\n'
+	data += ' * Do not edit it manually.\n'
 	data += ' * define neccessary variables below\n'
 	data += ' */\n\n'
 
+	data += '#define _GNU_SOURCE\n'
+	data += '#include <mpi.h>\n'
 	data += '#include "simple_compress.h"\n'
 	# sc should be initialized in input header
 	data += 'SimpleCompress *sc;\n\n'
 
 	data += 'struct timespec tm1, tm2, tm3, tm4, compute_time, mpi_time, this_func_time;\n'
 	data += 'struct timespec compute_time_all, mpi_time_all, recorder_time_all;\n'
+	data += 'struct timespec write_time_all, read_time_all;\n'
 	data += 'int ret, result_len, array_size, s_offset;\n'
-	data += 'char comm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name[100], newtype_name[100];\n'
+	data += 'char comm_name[100], newcomm_name[100], etype_name[100], filetype_name[100], datatype_name[100], oldtype_name[100], newtype_name[100], temp_datatype_name[100];\n'
 	data += '#define AS 300000\n'
-	data += 'char array_of_gsizes_arraystore[AS], array_of_distribs_arraystore[AS], array_of_dargs_arraystore[AS], array_of_psizes_arraystore[AS], array_of_sizes_arraystore[AS], array_of_subsizes_arraystore[AS], array_of_starts_arraystore[AS], array_of_blocklengths_arraystore[AS], array_of_displacements_arraystore[AS], array_of_types_arraystore[AS];\n'
+	data += 'char array_of_requests_arraystore[AS], array_of_gsizes_arraystore[AS], array_of_distribs_arraystore[AS], array_of_dargs_arraystore[AS], array_of_psizes_arraystore[AS], array_of_sizes_arraystore[AS], array_of_subsizes_arraystore[AS], array_of_starts_arraystore[AS], array_of_blocklengths_arraystore[AS], array_of_displacements_arraystore[AS], array_of_types_arraystore[AS];\n'
 	# add buffer
 	data += '#define BUFFER_SIZE 4096\n'
 	data += 'const int threshold = BUFFER_SIZE * 0.9;\n'
 	data += 'int bytes, written_bytes;\n'
 	data += 'char rec_buffer[4096];\n\n'
+	data += '#include <mpi.h>\n'
+	data += 'MPI_Datatype* temp_datatype;\n'
 
 
 # copy initialzation from recorder
@@ -63,16 +68,32 @@ def generate_one_function(para_list, out_file, func_file):
 # generate function body
 	paras = para_list[2:]
 	
-	def datatype_code(datatype):
-		datatype_code = '''PMPI_Type_get_name(%(data)s, %(data)s_name, &result_len);\n
+	def datatype_code(datatype, pointer=False):
+		if pointer == False:
+			datatype_code = '''PMPI_Type_get_name(%(pointer)s%(data)s, %(data)s_name, &result_len);\n
 		if (result_len == 0) {
-			sprintf(%(data)s_name, "%%lu", %(data)s);
+			sprintf(%(data)s_name, "%%lu", %(pointer)s%(data)s);
 		}
 		'''
-		result = datatype_code % {'data' : datatype}
+		else:
+			datatype_code = '''sprintf(%(data)s_name, "%%lu", %(pointer)s%(data)s);\n'''
+		if pointer == False:
+			result = datatype_code % {'pointer' : '', 'data' : datatype}
+		else:
+			result = datatype_code % {'pointer' : '*', 'data' : datatype}
 		return result
 
-	get_name = {'comm': 'PMPI_Comm_get_name(comm, comm_name, &result_len);\n', 
+	def comm_code(comm):
+		com_code = '''PMPI_Comm_get_name(%(pointer)s%(data)s, %(data)s_name, &result_len);\n
+		if (result_len == 0) {
+			sprintf(%(data)s_name, "%%lu", %(pointer)s%(data)s);
+		}
+		'''
+		result = com_code % {'pointer' : '', 'data' : comm}
+		return result
+
+	get_name = {'comm': comm_code('comm'), 
+				'newcomm' : comm_code('newcomm'),
 				'datatype': datatype_code('datatype'),
 				'etype': datatype_code('etype'),
 				'filetype': datatype_code('filetype'),
@@ -109,6 +130,8 @@ def generate_one_function(para_list, out_file, func_file):
 	print func
 	if func == 'MPI_File_close':
 		body += '\tMPI_File real_fh = *fh;\n'
+	elif func == 'MPI_Wait':
+		body += '\tMPI_Request real_request = *request;\n'
 		
 
 	for para in paras:
@@ -121,14 +144,23 @@ def generate_one_function(para_list, out_file, func_file):
 		true_para = true_para.rstrip('[]')
 
 		func_info += true_para.lstrip('*') + ' '
+		
+		if true_para.lstrip('*').startswith('array'):
+			array = True;
+			if pointer == True:
+				pointer = False
+
+		if type_of_para == 'MPI_Status':
+			array = False
 
 		
 		extra = get_name.get(true_para.lstrip('*'), None)
 		if extra is not None and array == False:
-			# for MPI_Datatype*
-			if pointer == True and type_of_para == 'MPI_Datatype':
-				true_true_para = true_para.lstrip('*')
-				after_call += 'sprintf(%s_name, "%%lu", *' % true_true_para + true_para.lstrip('*') + ');\n'
+			# for MPI_Datatype* newtype
+			if pointer == True:
+				if type_of_para == 'MPI_Datatype' or type_of_para == 'MPI_Comm':
+					true_true_para = true_para.lstrip('*')
+					after_call += 'sprintf(%s_name, "%%lu", *' % true_true_para + true_para.lstrip('*') + ');\n'
 			else:
 				extra_data += extra
 			
@@ -137,7 +169,6 @@ def generate_one_function(para_list, out_file, func_file):
 			print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 			print_format_2 += para_delim + true_para.lstrip('*') + '_name'
 		elif pointer == True and array == False:
-			# TODO: process array here
 			# char*
 			if type_of_para == 'char':
 				print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
@@ -149,32 +180,45 @@ def generate_one_function(para_list, out_file, func_file):
 				#print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 				# get address
 				print_format_1 += true_para.lstrip('*') + '=' + "%lu" + delim
-				if type_of_para == 'MPI_File': # only use address
+				if type_of_para == 'MPI_File' or type_of_para == "MPI_Request": # only use address
 					#print_format_2 += ', ' + true_para
 					if func == 'MPI_File_close':
 						print_format_2 += para_delim + 'real_fh'
+					elif func == 'MPI_Wait':
+						print_format_2 += para_delim + 'real_request'
 					else:
 						print_format_2 += para_delim + '*' + true_para.lstrip("*")
 				else:
 					print_format_2 += para_delim + true_para.lstrip('*')
 
 		elif pointer == False and array == True:
-			true_para.rstrip('[]')
+			true_para = true_para.rstrip('[]')
+			true_para = true_para.strip('*')
 			if func.endswith('array'):
 				get_array_size = 'array_size = ndims;\n'
 			else:
 				get_array_size = 'array_size = count;\n'
 			get_array_content += 's_offset += sprintf(' + true_para + '_arraystore+s_offset, "%d-", array_size);\n' 
 			if type_of_para != 'MPI_Datatype':
+				true_para = true_para.lstrip('*')
 				get_array_content += 'for(int i=0; i<array_size; i++) {\n'
-				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, "' + para_format.get(type_of_para, 'Error') + '", ' + '*' + true_para+'+sizeof(' + type_of_para + ')*i' + ');\n'
+				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, "' + para_format.get(type_of_para, 'Error') + '", ' + '*(' + true_para + '+i)' + ');\n'
 				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, ' + '"-");\n'
 				get_array_content += '}\n'
 				get_array_content += 's_offset = 0;\n'
 			else:
+				true_para = true_para.lstrip('*')
+				get_array_content += 'for(int i=0; i<array_size; i++) {\n'
+				get_array_content += 'temp_datatype = (' + true_para+'+i);'
+				get_array_content += datatype_code('temp_datatype', True)
+
+				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, "%s", ' + 'temp_datatype_name'  +');\n'
+				get_array_content += '\ts_offset += sprintf(' + true_para + '_arraystore+s_offset, ' + '"-");\n'
+				get_array_content += '}\n'
+				get_array_content += 's_offset = 0;\n'
 				pass # TODO
 			print_format_1 += true_para.lstrip('*') + '=' + "%s" + delim
-			print_format_2 += para_delim + true_para + '_arraystore'
+			print_format_2 += para_delim + true_para.lstrip('*') + '_arraystore'
 		else:
 			print_format_1 += true_para.lstrip('*') + '=' + para_format.get(type_of_para, 'Error') + delim
 			if type_of_para == 'MPI_File':
@@ -201,7 +245,13 @@ def generate_one_function(para_list, out_file, func_file):
 	body += '\tret = RECORDER_MPI_CALL(' + para_list[0] + ')' + call_para + ';\n'
 	body += '\ttm3 = recorder_wtime();\n'
 	body += '\tmpi_time = tm3 - tm2;\n'
-	body += '\tmpi_time_all += mpi_time;\n'
+#	body += '\tmpi_time_all += mpi_time;\n'
+	if "read" in func:
+		body += '\tread_time_all += mpi_time;\n'
+	elif "write" in func:
+		body += '\twrite_time_all += mpi_time;\n'
+	else:
+		body += '\tmpi_time_all += mpi_time;\n';
 	body += after_call
 
 #	body += '\tif (__recorderfh != NULL)\n'

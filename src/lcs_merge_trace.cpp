@@ -12,6 +12,13 @@
 
 using namespace std;
 
+// preprocess time
+struct timespec pp_time;
+// merge time
+struct timespec merge_time;
+// post process time
+struct timespec post_time;
+
 // well, I know it's ugly. Don't laugh. -_-!
 int display_shortest_edit_script(ostream& fout, int k, int d, int x, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b, str_hmap_list& b_aux);
 
@@ -67,18 +74,18 @@ int find_shortest_edit(ostream& fout, str_hmap_list& a, str_hmap_list& b, str_hm
 		for (int i=0; i<2*d+1; i++)
 			//cout << (*storage[d])[i] << " ";
 			;
-		cout << endl; 
+	//	cout << endl; 
 
 		//copy((*storage[d]).begin(), (*storage[d]).end(), ostream_iterator<int>(cout, " "));
-		cout << endl;
+		//cout << endl;
 	}
 	return -1;
 }
 
 int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<vector<int>*>& storage, str_hmap_list& a, str_hmap_list& b, str_hmap_list& b_aux)
 {
-	cout << endl;
-	cout << "Display here." << endl;
+	//cout << endl;
+	//cout << "Display here." << endl;
 	//cout << "k:" << k << " d:" << d << " value:" << value << endl;
 
 	if (d == 0) {
@@ -103,7 +110,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 		if ((*storage[d-1])[k+1+middle] == value) {
 			display_shortest_edit_script(fout, k+1, d-1, value, storage, a, b, b_aux);
 
-			cout << "vectical edge from (" << value << "," << (value - (k+1)) << ") to " << "(" << value << "," << value-k << ")" << endl; 
+			//cout << "vectical edge from (" << value << "," << (value - (k+1)) << ") to " << "(" << value << "," << value-k << ")" << endl; 
             // insert unique element in string B
             fout << "insert " << b[value-k] << b_aux[value-k] << endl;
 
@@ -115,7 +122,7 @@ int display_shortest_edit_script(ostream& fout, int k, int d, int value, vector<
 		}
 		else if ((*storage[d-1])[k-1+middle] == value-1) {
 			display_shortest_edit_script(fout, k-1, d-1, value-1, storage, a, b, b_aux);
-			cout << "horizontal edge from (" << value-1 << "," << value-1-(k-1) << ") to " << "(" << value << "," << value-k << ")" << endl;
+			//cout << "horizontal edge from (" << value-1 << "," << value-1-(k-1) << ") to " << "(" << value << "," << value-k << ")" << endl;
 			//fout << "delete " << value-1 << endl;
             fout << "delete 1" << endl;
 
@@ -183,13 +190,17 @@ void post_process(const char* temp_filename, const char* filename)
 int lcs_merge_two(str_hmap_list& la, const char * prefix, int procs, int i, str_hmap_list& a_aux)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
-	string b(string(prefix) + "log." + std::to_string(i));
-	Preprocess<str_hmap_list, str_hmap> ppb(b, procs, i, true);
+    struct timespec pp_b = recorder_wtime();
+	string b(string(prefix) + "compressed_log." + std::to_string(i));
+	Preprocess<str_hmap_list, str_hmap> ppb(b, procs, i);
 	ppb.run();	
     //ppb.data_print();
     str_hmap_list& lb = ppb.get_data();
     str_hmap_list& b_aux = ppb.get_auxiliary();
+    struct timespec pp_e = recorder_wtime();
+    pp_time += pp_e - pp_b;
 
+	struct timespec merge_b = recorder_wtime();
     const char* temp_filename = "lcs_diff_output_temp";
     ofstream fout(temp_filename);
     string s_filename = "lcs/merged_lcs." + to_string(i);
@@ -199,9 +210,14 @@ int lcs_merge_two(str_hmap_list& la, const char * prefix, int procs, int i, str_
 	int r = find_shortest_edit(fout, la, lb, a_aux, b_aux);
     
 	cout << "The edit distance between logs is " << r << endl;
-    
+	struct timespec merge_e = recorder_wtime();
+    	merge_time += merge_e - merge_b;
+
+	struct timespec post_b = recorder_wtime();
     post_process(temp_filename, filename);
     cout << "filename --> " << filename << endl;
+    struct timespec post_e = recorder_wtime();
+    post_time += post_e - post_b;
 
 	return 0;
 }
@@ -217,14 +233,17 @@ int main(int argc, char* argv[])
     	int logs = stoi(num);
 	const char * prefix = argv[2];
 	string base(prefix);
-	base += "/log.0";
+	base += "/compressed_log.0";
 
 	struct timespec begin = recorder_wtime();
-	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0, true);
+	struct timespec pp_b = recorder_wtime();
+	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0);
 	ppa.run();	
     //ppa.data_print();
     str_hmap_list& la = ppa.get_data();
     str_hmap_list& a_aux = ppa.get_auxiliary();
+    	struct timespec pp_e = recorder_wtime();
+	pp_time += pp_e - pp_b;
 
 	for (int i=1; i<logs; i++) {
 		// merge log 0 and log i
@@ -239,6 +258,9 @@ int main(int argc, char* argv[])
 	struct timespec cost = end - begin;
 
 	printf("LCS merge cost %ld.%09ld second\n", cost.tv_sec, cost.tv_nsec);
+	printf("Preprocess logs cost %ld.%09ld second\n", pp_time.tv_sec, pp_time.tv_nsec);
+	printf("Merge logs cost %ld.%09ld second\n", merge_time.tv_sec, merge_time.tv_nsec);
+	printf("Post process cost %ld.%09ld second\n", post_time.tv_sec, post_time.tv_nsec);
 
 	return 0;
 }

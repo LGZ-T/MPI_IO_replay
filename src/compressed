@@ -1,0 +1,38 @@
+
+comm=MPI_COMM_WORLD func=MPI_Comm_size size=size 
+comm=MPI_COMM_WORLD func=MPI_Comm_rank rank=rank 
+basic_len=1- buf=buf comm=MPI_COMM_WORLD count=1024 datatype=MPI_CHAR func=MPI_Recv repetition=255- source=3 status=status tag=tag 
+buffer=buffer comm=MPI_COMM_WORLD count=1 datatype=MPI_INT func=MPI_Bcast root=0 
+comm=MPI_COMM_WORLD func=MPI_Comm_size size=size 
+buffer=buffer comm=MPI_COMM_WORLD count=4 datatype=MPI_BYTE func=MPI_Bcast root=0 
+comm=MPI_COMM_WORLD func=MPI_Barrier 
+basic_len=1- comm=MPI_COMM_WORLD count=1 datatype=MPI_DOUBLE func=MPI_Reduce op=op recvbuf=recvbuf repetition=2- root=0 sendbuf=sendbuf 
+buffer=buffer comm=MPI_COMM_WORLD count=1 datatype=MPI_DOUBLE func=MPI_Bcast root=0 
+buffer=buffer comm=MPI_COMM_WORLD count=1 datatype=MPI_INT func=MPI_Bcast root=0 
+basic_len=1- buf=buf comm= count=1024 datatype=MPI_CHAR func=MPI_Recv repetition=255- source=3 status=status tag=tag 
+buffer=buffer comm= count=1 datatype=MPI_INT func=MPI_Bcast root=0 
+buffer=buffer comm= count=1 datatype=MPI_UNSIGNED_INT func=MPI_Bcast root=0 
+comm= func=MPI_Barrier 
+amode=41 comm=MPI_COMM_SELF fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000000 func=MPI_File_open info=info 
+MARK=startingpoint buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_write_at offset=0 status=status 
+MARK=startingpoint buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_write_at offset=131072 status=status 
+basic_len=1- buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_write_at offset=0 repetition=4094- status=status 
+fh=1 func=MPI_File_close 
+comm= func=MPI_Barrier 
+amode=2 comm= fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000000 func=MPI_File_open info=info 
+fh=1 func=MPI_File_close 
+basic_len=1- comm= count=1 datatype=MPI_LONG_LONG func=MPI_Allreduce op=op recvbuf=recvbuf repetition=2- sendbuf=sendbuf 
+basic_len=1- comm= count=1 datatype=MPI_DOUBLE func=MPI_Reduce op=op recvbuf=recvbuf repetition=12- root=0 sendbuf=sendbuf 
+comm= func=MPI_Barrier 
+amode=41 comm=MPI_COMM_SELF fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000012 func=MPI_File_open info=info 
+MARK=startingpoint buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_read_at offset=0 status=status 
+MARK=startingpoint buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_read_at offset=131072 status=status 
+basic_len=1- buf=buf count=131072 datatype=MPI_BYTE fh=1 func=MPI_File_read_at offset=0 repetition=4094- status=status 
+fh=1 func=MPI_File_close 
+amode=2 comm= fh=1 filename=/home/wzzhang/project-cse/zhangyou/tmp/ior.dat.00000012 func=MPI_File_open info=info 
+fh=1 func=MPI_File_close 
+basic_len=1- comm= count=1 datatype=MPI_LONG_LONG func=MPI_Allreduce op=op recvbuf=recvbuf repetition=2- sendbuf=sendbuf 
+basic_len=1- comm= count=1 datatype=MPI_DOUBLE func=MPI_Reduce op=op recvbuf=recvbuf repetition=12- root=0 sendbuf=sendbuf 
+basic_len=1- comm= func=MPI_Barrier repetition=2- 
+comm=MPI_COMM_WORLD func=MPI_Barrier 
+TheLastElement=END 
