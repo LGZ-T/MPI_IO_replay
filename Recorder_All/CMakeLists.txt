@@ -1,0 +1,30 @@
+set(ODIR ${CMAKE_CURRENT_BINARY_DIR})
+
+exec_program(./func-to-decl.py ${CMAKE_CURRENT_SOURCE_DIR}
+   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/func_list ${ODIR}/decl_list )
+exec_program(./Type_and_Extern_Generator.py ${CMAKE_CURRENT_SOURCE_DIR} 
+   ARGS ${ODIR}/decl_list 
+   ${ODIR}/recorder-mpi-init-finalize-compress.c 
+   ${ODIR}/recorder-dynamic.h
+   )
+exec_program(./MPI_wrapper_generator_compress.py ${CMAKE_CURRENT_SOURCE_DIR}
+   ARGS ${ODIR}/recorder-mpi-init-finalize-compress.c
+   ${ODIR}/recorder-mpi-io-compress.cpp 
+   ${ODIR}/func_info
+   )
+
+find_package(MPI)
+
+set(CMAKE_CXX_FLAGS "-std=c++11")
+add_definitions(
+   -DRECORDER_CONFIG_H=recorder-runtime-config.h
+   -D_LARGEFILE64_SOURCE
+   -DRECORDER_PRELOAD
+   )
+include_directories(./ ./lib)
+
+add_library(recorder-compress SHARED
+   lib/simple_compress.cpp
+   ${ODIR}/recorder-mpi-io-compress.cpp 
+   ${ODIR}/recorder-mpi-init-finalize-compress.c
+   )

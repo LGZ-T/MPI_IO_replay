@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib
+END
+recorder-posix.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib/recorder-posix.c
+END
+recorder-pnetcdf.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib/recorder-pnetcdf.c
+END
+recorder-mpi-init-finalize.c
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib/recorder-mpi-init-finalize.c
+END
+recorder-hdf5.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib/recorder-hdf5.c
+END
+recorder-mpi-io.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/H5AutoTuner/!svn/ver/127/trunk/Recorder_New/lib/recorder-mpi-io.c
+END
