@@ -6,6 +6,8 @@ Replay MPI I/O operation according to the input trace file.
 Build
 ------
 
+.. code:: bash
+
    $ mkdir build; cd build;
    $ cmake ..
    $ make
@@ -18,4 +20,14 @@ Build
 Run
 ----
 
-   $ LD_PRELOAD="librecorder-compress.so" mpirun -np <#> <prog>
+output trace::
+
+   $ LD_PRELOAD="Recorder_All/librecorder-compress.so" mpirun -np <#> <prog>
+   
+compress trace::
+
+   $ src/compress <log dir>
+   
+   
+   
+
