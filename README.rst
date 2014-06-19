@@ -20,13 +20,17 @@ Build
 Run
 ----
 
-output trace::
+output trace:
 
-   $ LD_PRELOAD="Recorder_All/librecorder-compress.so" mpirun -np <#> <prog>
+.. code:: bash
+
+   $ LD_PRELOAD="Recorder_All/librecorder-compress.so" mpirun -np [num] [prog]
    
-compress trace::
+compress trace:
 
-   $ src/compress <log dir>
+.. code:: bash
+
+   $ src/compress [log dir]
    
    
    
