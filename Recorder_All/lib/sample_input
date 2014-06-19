@@ -1,7 +1,0 @@
-1392570298.00000 func=MPI_Comm_size comm=MPI_COMM_WORLD *size
-1392570298.00000 func=MPI_Comm_rank comm=MPI_COMM_WORLD *rank
-1392570298.00000 func=MPI_Comm_size comm=MPI_COMM_WORLD *size
-1392570298.00000 func=MPI_File_open comm=MPI_COMM_SELF filename=/mnt/sda1/ior.dat.00000000 amode=41 info=37376816 fh=37382272
-1392570298.00000 func=MPI_File_write_at fh=37388224 offset=0 buf=*buf count=4096 datatype=MPI_BYTE status=1785370976
-1392570298.00000 func=MPI_File_write_at fh=37388224  offset=4096  buf=*buf  count=4096  datatype=MPI_BYTE  status=1785370976
-1392570298.00000 func=MPI_File_write_at fh=37388224 offset=8192 buf=*buf count=4096 datatype=MPI_BYTE status=1785370976

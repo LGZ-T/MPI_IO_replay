@@ -23,7 +23,7 @@ private:
 
 public:
 	SimpleCompress() {};
-	SimpleCompress(char *logname)
+	SimpleCompress(const char *logname)
 	{
 		//std::cout << "Open stream " << logname << std::endl;
 		os.open(logname);
