@@ -25,7 +25,10 @@ class SuffixTree
 {
 public:
 	// active point is initialized as (root, None, 0), remainder initialized as 1
-	SuffixTree(str_hmap_list& str, str_hmap_list& tm):test_str(str), aux(tm), root(test_str, NULL), active_point(&root, 0), remainder(0), pos(0), active_e(0), ls(), dfs_to_leaf(str.size()), leaf_to_dfs(str.size()) {}
+	SuffixTree(str_hmap_list& str, str_hmap_list& tm):
+		test_str(str), aux(tm), root(test_str, NULL), active_point(&root, 0),
+		remainder(0), pos(0), active_e(0), ls(), dfs_to_leaf(str.size()),
+		leaf_to_dfs(str.size()) {}
 	int construct(void);
 
 	// return -1 if no such sub exist, return the beginning postion of this substring in thr original string if it exist
@@ -96,9 +99,7 @@ private:
 	str_hmap_list& aux;
 
 	vector<map<int, int> > repetitions;
-
 	struct Node;
-	typedef struct Node Node;
 
 	int output_single_rep(int begin, int end, ostream& os, vector<map <int, int> >& rep_len, bool output);
 	int label_non_primitive(int leaf, Node* node);
@@ -166,9 +167,10 @@ private:
 
 		bool is_none(void) { return begin == 0 && end == 0; }
 	};
-	typedef struct Edge Edge;
 
 	struct Node{
+		typedef struct Edge Edge; // the entry accessable type for Node
+
 		int depth;
 		int dfs_num_begin, dfs_num_end;
 		int largest_sub_begin, largest_sub_end;
@@ -240,20 +242,20 @@ private:
 
 		friend ostream& operator<<(ostream& os, Node& node)
 		{
-			map<Edge*, bool>::iterator iter;
+			map<Node::Edge*, bool>::iterator iter;
 			map<str_hmap, Edge*>::iterator iter_f;
 
 			for (iter=node.edges.begin(); iter!=node.edges.end(); ++iter)
 				os << iter->first << '\t';
 			os << endl;
-			
+
 			for (iter_f=node.findedges.begin(); iter_f!=node.findedges.end(); ++iter_f)
 				os << iter_f->first << "-->" << iter_f->second << endl;
 
 			return os;
 		}
+
 	};
-	//typedef struct Node Node;
 
 	class ActivePoint{
 	public:

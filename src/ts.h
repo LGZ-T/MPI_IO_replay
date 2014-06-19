@@ -1,6 +1,5 @@
 #ifndef _TS_H_
 #define _TS_H_
-#define _GNU_SOURCE
 #include <sys/time.h>
 #include <time.h>
 

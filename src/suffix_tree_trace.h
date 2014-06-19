@@ -100,9 +100,7 @@ public:
 	int print_tree(void);
 private:
 	str_hmap_list& test_str;
-
 	struct Node;
-	typedef struct Node Node;
 
 	struct Edge{
 
@@ -178,9 +176,9 @@ private:
 
 		bool is_none(void) { return begin == 0 && end == 0; }
 	};
-	typedef struct Edge Edge;
 
 	struct Node{
+		typedef struct Edge Edge;
 		str_hmap_list& test_node_str;
 		map<int, int> testmap;
 		map<Edge*, bool> edges;
@@ -233,7 +231,7 @@ private:
 
 		friend ostream& operator<<(ostream& os, Node& node)
 		{
-			map<Edge*, bool>::iterator iter;
+			map<Node::Edge*, bool>::iterator iter;
 			map<str_hmap, Edge*>::iterator iter_f;
 
 			for (iter=node.edges.begin(); iter!=node.edges.end(); ++iter)
