@@ -58,22 +58,22 @@ private:
 //	int push_with_simple_compress(K & cur_func);	No longer needed
 
 public:
-	Preprocess(string filename_para, int nprocs_para, int rank_para, bool first_para);
+	Preprocess(string filename_para, int nprocs_para, int rank_para, bool first_para = false);
 //	~Preprocess();
 
 	// return 0 if success
 	void changefile(string file_name_para);
 	int run();
 	// TODO: why the adding of const will cause error?
-	int data_print(ostream & out);
-	int data_print_pure(ostream & out);
+	int data_print(ostream & out = cout);
+	int data_print_pure(ostream & out = cout);
 	T & get_data(void);
 	T & get_auxiliary(void) { return auxiliary_data; }
 };
 
 // Important! The implementation and definition of TEMPLATE CLASS MUST put in the same FILE!!!
 template <typename T, typename K>
-Preprocess<T, K>::Preprocess(string filename_para, int procs_para, int rank_para, bool first_para = false)
+Preprocess<T, K>::Preprocess(string filename_para, int procs_para, int rank_para, bool first_para)
 {
 	first = first_para;
 	filename = filename_para;
@@ -364,7 +364,7 @@ T & Preprocess<T, K>::get_data(void)
 
 // for test
 template<typename T, typename K>
-int Preprocess<T, K>::data_print(ostream & out = cout)
+int Preprocess<T, K>::data_print(ostream & out)
 {
 	out << "Outputing all data..." << std::endl;
 	if (all_data.empty()) {
@@ -388,7 +388,7 @@ int Preprocess<T, K>::data_print(ostream & out = cout)
 }
 
 template<typename T, typename K>
-int Preprocess<T, K>::data_print_pure(ostream & out = cout)
+int Preprocess<T, K>::data_print_pure(ostream & out)
 {
 	out << "Outputing all data..." << std::endl;
 	if (all_data.empty()) {
