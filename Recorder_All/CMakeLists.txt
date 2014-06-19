@@ -28,3 +28,9 @@ add_library(recorder-compress SHARED
    ${ODIR}/recorder-mpi-io-compress.cpp 
    ${ODIR}/recorder-mpi-init-finalize-compress.c
    )
+target_link_libraries(recorder-compress
+   ${MPI_CXX_LIBRARIES}
+   )
+set_target_properties(recorder-compress
+   PROPERTIES LINK_FLAGS ${MPI_CXX_LINK_FLAGS}
+   )
