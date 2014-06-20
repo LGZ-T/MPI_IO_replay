@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
 	Preprocess<str_hmap_list, str_hmap> pp_base(prefix + "log.0", log_num, 0, true);
 	pp_base.run();
 	str_hmap_list& base = pp_base.get_data();
+	str_hmap_list& aux = pp_base.get_auxiliary();
 	struct timespec pp_time1_e = recorder_wtime();
 	pp_time += (pp_time1_e - pp_time1_b);
 
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
 
 	struct timespec b_time_b = recorder_wtime();
 	cout << "Begining" << endl;
-	SuffixTree st(base);
+	SuffixTree st(base,aux);
 
 	cout << "Constructing Suffix tree" << endl;
 	st.construct();
