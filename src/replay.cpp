@@ -411,7 +411,7 @@ double get_ratio(string ratiofile)
 int main(int argc, char* argv[])
 {
 	if (argc != 4) {
-		cout << "Usage: ./replay NUM(number of files) SKELETON_NUM RATIOFILE";
+		cout << "Usage: ./replay NUM(number of files) SKELETON_NUM RATIOFILE" << endl;
 		return 1;
 	}
     	int logs = stoi(argv[1]);
