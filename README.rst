@@ -32,6 +32,10 @@ compress trace:
 
    $ src/compress [log dir]
    
-   
+merge traces:
+
+.. code:: bash
+
+   $ src/lcs_trace
    
 
