@@ -30,12 +30,27 @@ compress trace:
 
 .. code:: bash
 
-   $ src/compress [log dir]
+   $ src/compress <single log file> <output log file>
    
 merge traces:
 
 .. code:: bash
 
-   $ src/lcs_trace
-   
+   $ src/lcs_trace <log_num> <compressed_log_dir> 
 
+compressed_log_dir's filename should keep as compressed_log.*, you need create
+a ``lcs`` folder at current work dir, then it would write output into this folder.
+   
+replay to a c code:
+
+.. code:: bash
+
+   $ src/replay <proc_num> <scale_rate> <single aux file> 
+
+you need create a ``construct`` folder at first.
+
+recompile the temp.c:
+
+.. code:: bash
+
+   $ mpicc -std=c99 -O0 temp.c 

@@ -427,7 +427,7 @@ int main(int argc, char* argv[])
 
 	// func name and parameters
 	map<string, vector<string>> func_info;
-	if (get_func_info("Recorder_All/lib/generator/func_info", func_info)) {
+	if (get_func_info("Recorder_All/func_info", func_info)) {
 		cout << "Func info missing?" << endl;
 		return 1;
 	}
@@ -440,7 +440,7 @@ int main(int argc, char* argv[])
 
 	cout << "func_info?" << endl;
 
-	string code_file("/home/wzzhang/project-cse/zhangyou/replay/temp.c");
+	string code_file("temp.c");
 	string infile_prefix("lcs/merged_lcs.");
 	string outfile_prefix("construct/log.");
 
