@@ -65,8 +65,8 @@ public:
 	void changefile(string file_name_para);
 	int run();
 	// TODO: why the adding of const will cause error?
-	int data_print(ostream & out = cout);
-	int data_print_pure(ostream & out = cout);
+	int data_print(ostream & out = cerr);
+	int data_print_pure(ostream & out = cerr);
 	T & get_data(void);
 	T & get_auxiliary(void) { return auxiliary_data; }
 };
@@ -90,7 +90,7 @@ Preprocess<T, K>::Preprocess(string filename_para, int procs_para, int rank_para
 	argument_maps.insert(make_pair("datatype", map<string, unsigned int>()));
 	argument_maps.insert(make_pair("request", map<string, unsigned int>()));
 	argument_maps.insert(make_pair("comm", map<string, unsigned int>()));
-	std::cout << "File " << filename << std::endl;
+	std::cerr << "File " << filename << std::endl;
 }
 
 template <typename T, typename K>
@@ -105,13 +105,13 @@ int Preprocess<T, K>::run()
 {
 	fstream fin(filename.c_str());
 	if (!fin) {
-		std::cout << "Unable to open input file:" << filename << std::endl;
+		std::cerr << "Unable to open input file:" << filename << std::endl;
 		return 1;
 	}
 	std::string ReadLine;
 	int lineno = 0;
 
-	std::cout << "Running" << std::endl;
+	std::cerr << "Running" << std::endl;
 	K empty;
 	all_data.push_back(empty);
 	auxiliary_data.push_back(empty);
@@ -120,7 +120,7 @@ int Preprocess<T, K>::run()
 	while (getline(fin,ReadLine))
 	{
 		lineno++;
-//		std::cout << lineno << '\t' << ReadLine << std::endl;
+//		std::cerr << lineno << '\t' << ReadLine << std::endl;
 		Preprocess::extract_data_from_single_line(ReadLine, lineno);
 //		if (lineno > 100)
 //			break;
@@ -139,15 +139,15 @@ unsigned int Preprocess<T, K>::build_match(string& key, string& value, bool free
 	typename map<string, unsigned int>::iterator inner_it;
 	if ((inner_it = (outer_it->second).find(value)) == (outer_it->second).end()) {
 		if (free == true) {
-			cout << "Freeing unallocated handle!" << endl;
-			cout << "Current parameter: " << key << endl;
-			cout << "Current Handle: " << value << endl;
-			cout << "Handle(argument) Map:" << endl;
+			cerr << "Freeing unallocated handle!" << endl;
+			cerr << "Current parameter: " << key << endl;
+			cerr << "Current Handle: " << value << endl;
+			cerr << "Handle(argument) Map:" << endl;
 
 			for (inner_it = outer_it->second.begin(); inner_it!=outer_it->second.end(); ++inner_it)
-				cout << inner_it->first << "->" << inner_it->second << "\t";
+				cerr << inner_it->first << "->" << inner_it->second << "\t";
 
-			cout << endl;
+			cerr << endl;
 			exit(1);
 		}
 		unsigned int num = outer_it->second.size() + 1;

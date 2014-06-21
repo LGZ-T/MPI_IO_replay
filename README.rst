@@ -45,9 +45,7 @@ replay to a c code:
 
 .. code:: bash
 
-   $ src/replay <proc_num> <scale_rate> <single aux file> 
-
-you need create a ``construct`` folder at first.
+   $ src/replay <num> <scale> <single aux file> <func_info> <merged_log_dir> <construct_log_dir> 2>/dev/null 1>temp.c
 
 recompile the temp.c:
 
