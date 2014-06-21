@@ -36,10 +36,10 @@ merge traces:
 
 .. code:: bash
 
-   $ src/lcs_trace <log_num> <compressed_log_dir> 
+   $ src/lcs_trace <log_num> <compressed_log_dir> <output_dir>
 
-compressed_log_dir's filename should keep as compressed_log.*, you need create
-a ``lcs`` folder at current work dir, then it would write output into this folder.
+compressed_log_dir's filename should keep as compressed_log.*, then it would
+write output into ``<output_dir>`` folder.
    
 replay to a c code:
 

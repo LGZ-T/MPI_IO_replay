@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iterator>
 #include <fstream>
+#include <sys/stat.h>
 #include "preprocess.h"
 
 
@@ -187,57 +188,67 @@ void post_process(const char* temp_filename, const char* filename)
     fout.close();
 }
 
-int lcs_merge_two(str_hmap_list& la, const char * prefix, int procs, int i, str_hmap_list& a_aux)
+int lcs_merge_two(str_hmap_list& la, string rdir, string wdir, int procs, int i, str_hmap_list& a_aux)
 {
     // Note: the first element in la and lb must be NULL(or sth like it), because the algorithm will ignore the first element
-    struct timespec pp_b = recorder_wtime();
-	string b(string(prefix) + "compressed_log." + std::to_string(i));
-	Preprocess<str_hmap_list, str_hmap> ppb(b, procs, i);
-	ppb.run();	
-    //ppb.data_print();
-    str_hmap_list& lb = ppb.get_data();
-    str_hmap_list& b_aux = ppb.get_auxiliary();
-    struct timespec pp_e = recorder_wtime();
-    pp_time += pp_e - pp_b;
+   struct timespec pp_b = recorder_wtime();
+   Preprocess<str_hmap_list, str_hmap> ppb(rdir+"compressed_log."+std::to_string(i), procs, i);
+   ppb.run();	
+   //ppb.data_print();
+   str_hmap_list& lb = ppb.get_data();
+   str_hmap_list& b_aux = ppb.get_auxiliary();
+   struct timespec pp_e = recorder_wtime();
+   pp_time += pp_e - pp_b;
 
-	struct timespec merge_b = recorder_wtime();
-    const char* temp_filename = "lcs_diff_output_temp";
-    ofstream fout(temp_filename);
-    string s_filename = "lcs/merged_lcs." + to_string(i);
-    const char * filename = s_filename.c_str();
-    cout << "filename --> " << filename << endl;
+   struct timespec merge_b = recorder_wtime();
+   const char* temp_filename = "/tmp/lcs_diff_output_temp";
+   ofstream fout(temp_filename);
+   string s_filename = wdir + "merged_lcs." + to_string(i);
+   const char * filename = s_filename.c_str();
+   cout << "filename --> " << filename << endl;
 
-	int r = find_shortest_edit(fout, la, lb, a_aux, b_aux);
-    
-	cout << "The edit distance between logs is " << r << endl;
-	struct timespec merge_e = recorder_wtime();
-    	merge_time += merge_e - merge_b;
+   int r = find_shortest_edit(fout, la, lb, a_aux, b_aux);
 
-	struct timespec post_b = recorder_wtime();
-    post_process(temp_filename, filename);
-    cout << "filename --> " << filename << endl;
-    struct timespec post_e = recorder_wtime();
-    post_time += post_e - post_b;
+   cout << "The edit distance between logs is " << r << endl;
+   struct timespec merge_e = recorder_wtime();
+   merge_time += merge_e - merge_b;
 
-	return 0;
+   struct timespec post_b = recorder_wtime();
+   post_process(temp_filename, filename);
+   cout << "filename --> " << filename << endl;
+   struct timespec post_e = recorder_wtime();
+   post_time += post_e - post_b;
+
+   return 0;
 }
 
 int main(int argc, char* argv[])
 {
-	if (argc != 3) {
-		cout << "Incorrect input" << endl;
+	if (argc != 4) {
+		cout << "useage:"<< argv[0]<<" NUM INPUT_DIR OUTPUT_DIR" << endl;
 		return 1;
 	}
 
 	string num(argv[1]);
-    	int logs = stoi(num);
-	const char * prefix = argv[2];
-	string base(prefix);
-	base += "/compressed_log.0";
+   int logs = stoi(num);
+   string rdir_str(argv[2]);
+   string wdir_str(argv[3]);
+   if(rdir_str.back()!='/') rdir_str.push_back('/');
+   if(wdir_str.back()!='/') wdir_str.push_back('/');
+
+   struct stat wdir_st;
+   if(stat(argv[3], &wdir_st)){
+      mkdir(argv[3], 0755);
+      stat(argv[3], &wdir_st);
+   }
+   if(! (wdir_st.st_mode & S_IFDIR) ){
+      perror("output target is not a dir:");
+      return errno;
+   }
 
 	struct timespec begin = recorder_wtime();
 	struct timespec pp_b = recorder_wtime();
-	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0);
+	Preprocess<str_hmap_list, str_hmap> ppa(rdir_str+"compressed_log.0", logs, 0);
 	ppa.run();	
     //ppa.data_print();
     str_hmap_list& la = ppa.get_data();
@@ -247,11 +258,11 @@ int main(int argc, char* argv[])
 
 	for (int i=1; i<logs; i++) {
 		// merge log 0 and log i
-		lcs_merge_two(la, prefix, logs, i, a_aux);
+		lcs_merge_two(la, rdir_str, wdir_str, logs, i, a_aux);
 	}
 	
 	// copy log.0
-	ofstream out0("lcs/merged_lcs.0");
+	ofstream out0(wdir_str + "merged_lcs.0");
 	ppa.data_print(out0);
 
 	struct timespec end = recorder_wtime();
