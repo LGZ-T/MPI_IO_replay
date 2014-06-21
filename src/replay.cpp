@@ -410,16 +410,21 @@ double get_ratio(string ratiofile)
 
 int main(int argc, char* argv[])
 {
-	if (argc != 4) {
-		cout << "Usage: ./replay NUM(number of files) SKELETON_NUM RATIOFILE" << endl;
+	if (argc != 6) {
+		cout << "Usage: ./replay <num> <scale> <single aux file> <func_info> <merged_log_dir> " << endl;
 		return 1;
 	}
-    	int logs = stoi(argv[1]);
+   int logs = stoi(argv[1]);
 	shrink = stoi(argv[2]);
+   const char* func_info = argv[4];
+   if(access(func_info, F_OK)){
+      perror("Couldn't open func_info file:");
+      return -1;
+   }
 
-	const char * zero = "lcs/merged_lcs.0";
-	string base(zero);
-	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0);
+   string rdir_str(argv[5]);
+   if(rdir_str.back() !='/') rdir_str.push_back('/');
+	Preprocess<str_hmap_list, str_hmap> ppa(rdir_str + "/merged_lcs.0", logs, 0);
 	ppa.run();	
     //ppa.data_print();
     	str_hmap_list& la = ppa.get_data();
