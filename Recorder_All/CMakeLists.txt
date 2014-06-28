@@ -21,7 +21,7 @@ add_definitions(
    -D_LARGEFILE64_SOURCE
    -DRECORDER_PRELOAD
    )
-include_directories(./ ./lib)
+include_directories(./ ./lib ${MPI_CXX_INCLUDE_PATH})
 
 add_library(recorder-compress SHARED
    lib/simple_compress.cpp
@@ -32,5 +32,7 @@ target_link_libraries(recorder-compress
    ${MPI_CXX_LIBRARIES}
    )
 set_target_properties(recorder-compress
-   PROPERTIES LINK_FLAGS ${MPI_CXX_LINK_FLAGS}
+   PROPERTIES LINK_FLAGS "${MPI_CXX_LINK_FLAGS}"
    )
+
+install(TARGETS recorder-compress DESTNATION lib)
