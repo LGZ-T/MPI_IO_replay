@@ -35,4 +35,4 @@ set_target_properties(recorder-compress
    PROPERTIES LINK_FLAGS "${MPI_CXX_LINK_FLAGS}"
    )
 
-install(TARGETS recorder-compress DESTNATION lib)
+install(TARGETS recorder-compress DESTINATION lib)
