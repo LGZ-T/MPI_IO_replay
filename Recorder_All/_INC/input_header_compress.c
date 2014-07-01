@@ -39,8 +39,7 @@ struct timespec begin, end;
 struct timespec recorder_wtime(void)
 {
 	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    	return ts;
+   return ts;
 }
 
 const long nano = 1000000000;
@@ -104,11 +103,11 @@ void recorder_mpi_initialize(int *argc, char ***argv)
    char cuser[L_cuserid] = {0};
    cuserid(cuser);
 
+   /** shouldn't be freed **/
    char* OutDir = getenv("RECORDER_OUTDIR");
-   if(OutDir){
+   if(OutDir)
       snprintf(logdir_name, sizeof(logdir_name), "%s", OutDir);
-      free(OutDir);
-   }else
+   else
       snprintf(logdir_name, sizeof(logdir_name), "%s_%s_%lu", cuser, __progname, time(0));
    int status;
    status = mkdir(logdir_name, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
