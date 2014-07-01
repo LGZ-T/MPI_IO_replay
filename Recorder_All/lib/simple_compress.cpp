@@ -184,7 +184,7 @@ int SimpleCompress::write_log(K & func)
 
 void create_sc_by_filename(SimpleCompress **sc, char *filename)
 {
-	cout << "create_sc_by_filename:" << filename << endl;
+	cerr << "create_sc_by_filename:" << filename << endl;
 	*sc = new SimpleCompress(filename);
 }
 

@@ -10,22 +10,24 @@
 #include "preprocess.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <sys/stat.h>
+
 
 using namespace std;
 
 
 int shrink = 20;
 
-void output_func(string func, map<string, vector<string> >& func_info, str_hmap_list& l, int i, ofstream& fout, int procs, int rank);
+void output_func(string func, map<string, vector<string> >& func_info, str_hmap_list& l, int i, ostream& fout, int procs, int rank);
 
 int construct_trace(string infile_prefix, string outfile_prefix, str_hmap_list& la, str_hmap_list& a_aux, int i)
 {
-	cout << la.size() << "-----" << a_aux.size() << endl;
+	cerr << la.size() << "-----" << a_aux.size() << endl;
 	if (a_aux.size() == la.size()+1)
 		a_aux.erase(a_aux.begin());
 
 	string c_filename = outfile_prefix + to_string(i);
-	cout << "output to " << c_filename << endl;
+	cerr << "output to " << c_filename << endl;
 	ofstream fout(c_filename.c_str());
 
 	string m_filename = infile_prefix + to_string(i);
@@ -42,27 +44,27 @@ int construct_trace(string infile_prefix, string outfile_prefix, str_hmap_list& 
 		switch(substrs[0][0])
 		{
 		case 'k':
-			cout << "k -- " << line << endl;
+			cerr << "k -- " << line << endl;
 			copy = stoi(substrs[1]);
 
 			for (int i=0; i<copy; i++) {
 				fout <<	la[pos] << a_aux[pos] << endl;
-				cout << pos << "-" << la[pos];
+				cerr << pos << "-" << la[pos];
 				pos++;
 			}
 			break;
 		case 'd':
-			cout << "d -- " << line << endl;
+			cerr << "d -- " << line << endl;
 			pos += stoi(substrs[1]);
 			break;
 		case 'i':
-			cout << "i -- " << line << endl;
+			cerr << "i -- " << line << endl;
 			//boost::trim_left(line, boost::is_any_of("insert "))
 			line = line.substr(7);
 			fout << line << endl;
 			break;
 		default:
-			cout << "can't recognize this!" << endl;
+			cerr << "can't recognize this!" << endl;
 		}
 	}
 	fin.close();
@@ -71,11 +73,8 @@ int construct_trace(string infile_prefix, string outfile_prefix, str_hmap_list& 
 	return 0;
 }
 
-int gen_code_head(string code_file)
+int gen_code_head(ostream& fout)
 {
-	string code = code_file;
-	ofstream fout(code.c_str());
-
 	fout << "#define _GNU_SOURCE // for clock_gettime, must be placed at the head of file!" << endl;
 	fout << "#include <stdio.h>" << endl;
 	fout << "#include <time.h>" << endl;
@@ -106,14 +105,11 @@ int gen_code_head(string code_file)
 	fout << "\tMPI_Comm_rank(MPI_COMM_WORLD,&myrank_r);" << endl << endl;
 	fout << "\tprintf(\"Process %d running...\\n\", myrank_r);" << endl << endl;
 
-	fout.close();
-
 	return 0;
 }
 
-int gen_code_tail(string code_file)
+int gen_code_tail(ostream& fout)
 {
-	ofstream fout(code_file.c_str(), ios::out | ios::app);
 
 	fout << "\tprintf(\"Process %d finished\\n\", myrank_r);" << endl << endl;
 	fout << "\tclock_gettime(CLOCK_MONOTONIC, &end);\n" << endl;
@@ -123,8 +119,6 @@ int gen_code_tail(string code_file)
 	fout << "\tMPI_Finalize();" << endl;
 	fout << "\treturn 0;" << endl;
 	fout << "}" << endl;
-
-	fout.close();
 }
 
 long get_compute_time(string tm, double ratio)
@@ -133,9 +127,9 @@ long get_compute_time(string tm, double ratio)
 	boost::split(substrs, tm, boost::is_any_of("."));
 
 	if (substrs.size() != 2) {
-		cout << "time info error!" << endl;
-		cout << "tm1:" << tm;
-		cout << endl;
+		cerr << "time info error!" << endl;
+		cerr << "tm1:" << tm;
+		cerr << endl;
 		return 1;
 	}
 	long sec = stol(substrs[0]);
@@ -148,18 +142,10 @@ long get_compute_time(string tm, double ratio)
 	return nsec;
 }
 
-int gen_code_body(string code_file, string file_prefix, map<string, vector<string>>& func_info, int procs, int rank, double ratio)
+int gen_code_body(ostream& fout, string file_prefix, map<string, vector<string>>& func_info, int procs, int rank, double ratio)
 {	
-	string code = code_file;
-	ofstream fout(code.c_str(), ios::out | ios::app);
-
-	if (!fout) {
-		cout << "Unable to open " << code << endl;
-		exit(1);
-	}
-
 	string filename = file_prefix + to_string(rank);
-	cout << "gen - " << filename << endl;
+	cerr << "gen - " << filename << endl;
 
 	ifstream fin(filename.c_str());
 	Preprocess<str_hmap_list, str_hmap> pp(filename, procs, rank);
@@ -220,7 +206,7 @@ int gen_code_body(string code_file, string file_prefix, map<string, vector<strin
 			substrs.clear();
 
 			boost::split(substrs, l[i]["actual_len"], boost::is_any_of("-"));
-			cout << substrs.size() << endl;
+			cerr << substrs.size() << endl;
 			for (int k=0; k<substrs.size(); k++) {
 				if (substrs[k] != "")
 					loop_end[i+stoi(substrs[k])-1]++;
@@ -249,12 +235,10 @@ int gen_code_body(string code_file, string file_prefix, map<string, vector<strin
 	}
 	
 	fout << "\t}\n" << endl;	// for if rank == xx
-	fout.close();
-
 	return 0;
 }
 
-void output_func(string func, map<string, vector<string> >& func_info, str_hmap_list& l, int i, ofstream& fout, int procs, int rank) 
+void output_func(string func, map<string, vector<string> >& func_info, str_hmap_list& l, int i, ostream& fout, int procs, int rank) 
 {
 		if (func == "")
 			return;
@@ -360,7 +344,7 @@ void output_func(string func, map<string, vector<string> >& func_info, str_hmap_
 			}
 
 			if (argument.size() == 0) {
-				cout << "Para " << parameter << " have no value!" << endl;
+				cerr << "Para " << parameter << " have no value!" << endl;
 			}
 			fout << argument;
 
@@ -376,7 +360,7 @@ int get_func_info(const char* filename, map<string, vector<string>>& func_info)
 	ifstream fin(filename);
 
 	if (!fin) {
-		cout << "Can't open function info file!" << endl;
+		cerr << "Can't open function info file!" << endl;
 		return 1;
 	}
 
@@ -410,39 +394,58 @@ double get_ratio(string ratiofile)
 
 int main(int argc, char* argv[])
 {
-	if (argc != 4) {
-		cout << "Usage: ./replay NUM(number of files) SKELETON_NUM RATIOFILE" << endl;
+	if (argc != 7) {
+		cerr << "Usage: ./replay <num> <scale> <single aux file> <func_info> <merged_log_dir> <construct_log_dir> " << endl;
 		return 1;
 	}
-    	int logs = stoi(argv[1]);
+   int logs = stoi(argv[1]);
 	shrink = stoi(argv[2]);
+   const char* func_info_str = argv[4];
+   if(access(func_info_str, F_OK)){
+      perror("Couldn't open func_info file:");
+      return -1;
+   }
 
-	const char * zero = "lcs/merged_lcs.0";
-	string base(zero);
-	Preprocess<str_hmap_list, str_hmap> ppa(base, logs, 0);
+   string rdir_str(argv[5]);
+   string wdir_str(argv[6]);
+   if(rdir_str.back() !='/') rdir_str.push_back('/');
+   if(wdir_str.back() !='/') wdir_str.push_back('/');
+
+   struct stat wdir_st;
+   if(stat(wdir_str.c_str(), &wdir_st)){
+      mkdir(wdir_str.c_str(), 0755);
+      stat(wdir_str.c_str(), &wdir_st);
+   }
+   if(! (wdir_st.st_mode & S_IFDIR) ){
+      perror("output target is not a dir:");
+      return errno;
+   }
+
+
+	Preprocess<str_hmap_list, str_hmap> ppa(rdir_str + "merged_lcs.0", logs, 0);
 	ppa.run();	
     //ppa.data_print();
-    	str_hmap_list& la = ppa.get_data();
+   str_hmap_list& la = ppa.get_data();
 	str_hmap_list& a_aux = ppa.get_auxiliary();
 
 	// func name and parameters
 	map<string, vector<string>> func_info;
-	if (get_func_info("Recorder_All/func_info", func_info)) {
-		cout << "Func info missing?" << endl;
+	if (get_func_info(func_info_str, func_info)) {
+		cerr << "Func info missing?" << endl;
 		return 1;
 	}
 
 	for (typename map<string, vector<string>>::iterator it=func_info.begin(); it!=func_info.end(); ++it) {
-		cout << it->first << endl;
-		copy(it->second.begin(), it->second.end(), ostream_iterator<string>(cout, "---"));
-		cout << endl;
+		cerr << it->first << endl;
+		copy(it->second.begin(), it->second.end(), ostream_iterator<string>(cerr, "---"));
+		cerr << endl;
 	}
 
-	cout << "func_info?" << endl;
+	cerr << "func_info?" << endl;
 
-	string code_file("temp.c");
-	string infile_prefix("lcs/merged_lcs.");
-	string outfile_prefix("construct/log.");
+   ostream& code_file = std::cout;
+	string infile_prefix = rdir_str + "merged_lcs.";
+	string outfile_prefix = wdir_str = "log.";
 
 	double ratio = get_ratio(argv[3]);
 	gen_code_head(code_file);

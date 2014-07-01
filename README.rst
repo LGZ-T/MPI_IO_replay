@@ -24,7 +24,8 @@ output trace:
 
 .. code:: bash
 
-   $ LD_PRELOAD="Recorder_All/librecorder-compress.so" mpirun -np [num] [prog]
+   $ LD_PRELOAD=Recorder_All/librecorder-compress.so mpirun -np [num] [prog]
+   $ RECORDER_OUTDIR=<override-dir> LD_PRELOAD=Recorder_All/librecorder-compress.so mpirun -np [num] [prog]
    
 compress trace:
 
@@ -36,18 +37,16 @@ merge traces:
 
 .. code:: bash
 
-   $ src/lcs_trace <log_num> <compressed_log_dir> 
+   $ src/lcs_trace <log_num> <compressed_log_dir> <output_dir>
 
-compressed_log_dir's filename should keep as compressed_log.*, you need create
-a ``lcs`` folder at current work dir, then it would write output into this folder.
+compressed_log_dir's filename should keep as compressed_log.*, then it would
+write output into ``<output_dir>`` folder.
    
 replay to a c code:
 
 .. code:: bash
 
-   $ src/replay <proc_num> <scale_rate> <single aux file> 
-
-you need create a ``construct`` folder at first.
+   $ src/replay <num> <scale> <single aux file> <func_info> <merged_log_dir> <construct_log_dir> 2>/dev/null 1>temp.c
 
 recompile the temp.c:
 

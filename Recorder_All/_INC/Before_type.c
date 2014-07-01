@@ -4,7 +4,7 @@
  */
 
 #define _XOPEN_SOURCE 500
-#define _GNU_SOURCE /* for RTLD_NEXT */
+// #define _GNU_SOURCE /* for RTLD_NEXT */
 
 #include "recorder-runtime-config.h"
 

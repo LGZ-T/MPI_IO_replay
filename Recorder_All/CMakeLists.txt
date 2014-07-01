@@ -4,12 +4,12 @@ exec_program(./func-to-decl.py ${CMAKE_CURRENT_SOURCE_DIR}
    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/func_list ${ODIR}/decl_list )
 exec_program(./Type_and_Extern_Generator.py ${CMAKE_CURRENT_SOURCE_DIR} 
    ARGS ${ODIR}/decl_list 
-   ${ODIR}/recorder-mpi-init-finalize-compress.c 
+   ${ODIR}/recorder-mpi-init-finalize-compress.cpp
    ${ODIR}/recorder-dynamic.h
    )
 exec_program(./MPI_wrapper_generator_compress.py ${CMAKE_CURRENT_SOURCE_DIR}
-   ARGS ${ODIR}/recorder-mpi-init-finalize-compress.c
-   ${ODIR}/recorder-mpi-io-compress.cpp 
+   ARGS ${ODIR}/recorder-mpi-init-finalize-compress.cpp
+   ${ODIR}/recorder-mpi-io-compress.cpp
    ${ODIR}/func_info
    )
 
@@ -21,16 +21,18 @@ add_definitions(
    -D_LARGEFILE64_SOURCE
    -DRECORDER_PRELOAD
    )
-include_directories(./ ./lib)
+include_directories(./ ./lib ${MPI_CXX_INCLUDE_PATH})
 
 add_library(recorder-compress SHARED
    lib/simple_compress.cpp
-   ${ODIR}/recorder-mpi-io-compress.cpp 
-   ${ODIR}/recorder-mpi-init-finalize-compress.c
+   ${ODIR}/recorder-mpi-io-compress.cpp
+   ${ODIR}/recorder-mpi-init-finalize-compress.cpp
    )
 target_link_libraries(recorder-compress
    ${MPI_CXX_LIBRARIES}
    )
 set_target_properties(recorder-compress
-   PROPERTIES LINK_FLAGS ${MPI_CXX_LINK_FLAGS}
+   PROPERTIES LINK_FLAGS "${MPI_CXX_LINK_FLAGS}"
    )
+
+install(TARGETS recorder-compress DESTINATION lib)
