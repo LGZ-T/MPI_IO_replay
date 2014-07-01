@@ -24,7 +24,8 @@ output trace:
 
 .. code:: bash
 
-   $ LD_PRELOAD="Recorder_All/librecorder-compress.so" mpirun -np [num] [prog]
+   $ LD_PRELOAD=Recorder_All/librecorder-compress.so mpirun -np [num] [prog]
+   $ RECORDER_OUTDIR=<override-dir> LD_PRELOAD=Recorder_All/librecorder-compress.so mpirun -np [num] [prog]
    
 compress trace:
 
