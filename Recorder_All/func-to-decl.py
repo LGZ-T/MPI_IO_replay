@@ -4,8 +4,8 @@
 import sys
 
 if __name__ == '__main__':
-	infile = open(sys.argv[1])
-	outfile = open(sys.argv[2], 'w')
+	infile = open("func_list")
+	outfile = open("decl_list", 'w')
 
 	for line in infile:
 		func_begin = line.find(' ') + 1

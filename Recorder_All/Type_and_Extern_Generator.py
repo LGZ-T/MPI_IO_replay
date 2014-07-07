@@ -62,39 +62,22 @@ def write_externs(out_file):
 	return
 
 if __name__ == '__main__':
-	input_init_compress = open(sys.argv[1])
-	output_init_compress = open(sys.argv[2], "w")
+	input_init_compress = open("decl_list")
+	output_init_compress = open("Type_and_Extern.cpp", "w")
 	
-	before_init = open("_INC/Before_type.c")
-	after_init = open("_INC/After_type.c")
-
-	
-	for line in before_init:
-		output_init_compress.write(line)
-
 	for line in input_init_compress:
 		if process(line, 'MPI_Scan', output_init_compress) == 2:
 			break
 	
 	write_resolve(output_init_compress)
 
-	for line in after_init:
-		output_init_compress.write(line)
-
 	input_init_compress.close()
 	output_init_compress.close()
-	before_init.close()
-	after_init.close()
 
 	# new recorder-dynamic.h
-	before_extern = open("_INC/Before_extern.h")
-	output_extern = open(sys.argv[3], "w")
-
-	for line in before_extern:
-		output_extern.write(line)
+	output_extern = open("Type_and_Extern.h", "w")
 
 	write_externs(output_extern)
 
-	before_extern.close()
 	output_extern.close()
 

@@ -279,8 +279,7 @@ def generate_one_function(para_list, out_file, func_file):
 	result = head + body
 	out_file.write(result)
 	func_file.write(func_info + '\n')
-	return 0
-		
+	return 0 
 
 def process(line, goodbye, out_file, func_file):
 	recorder_prefix = 'RECORDER_FORWARD_DECL'
@@ -309,17 +308,14 @@ def process(line, goodbye, out_file, func_file):
 	return 0
 
 if __name__ == '__main__':
-	input_file = open(sys.argv[1])
-	output_file = open(sys.argv[2], 'w')
-	input_header = open('_INC/input_header_compress.c')
+	input_file = open("Type_and_Extern.cpp")
+	output_file = open("MPI_wrapper.cpp", 'w')
 
-	func_file = open(sys.argv[3], 'w')
+	func_file = open("func_info", 'w')
 
-	generate_head(input_header, output_file)
 	for line in input_file:
 		if process(line, '(PMPI_Finalize', output_file, func_file) == 2:
 			break
 
 	input_file.close()
-	output_file.close()
 	func_file.close()
